@@ -1,0 +1,965 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: js6pak <me@6pak.dev>
+Date: Thu, 22 Jun 2023 17:26:05 +0200
+Subject: [PATCH] Add settings for full power menu
+
+Feature: full-power-menu
+
+diff --git a/AndroidManifest.xml b/AndroidManifest.xml
+index c5622b15e8a5e373c9d8dad4f4bf52134bb1b732..810424916f72fd012a74461989cd3a8157988f48 100644
+--- a/AndroidManifest.xml
++++ b/AndroidManifest.xml
+@@ -4373,6 +4373,27 @@
+                        android:value="@string/menu_key_system"/>
+         </activity>
+ 
++        <activity
++            android:name="Settings$FullPowerMenuSettingsActivity"
++            android:label="@string/power_menu_setting_name"
++            android:exported="true"
++            android:enabled="true">
++            <intent-filter android:priority="32">
++                <action android:name="android.intent.action.MAIN" />
++                <category android:name="com.android.settings.SHORTCUT" />
++            </intent-filter>
++            <intent-filter android:priority="1">
++                <action android:name="com.android.settings.FULL_POWER_MENU_SETTINGS" />
++                <category android:name="android.intent.category.DEFAULT" />
++            </intent-filter>
++            <meta-data android:name="com.android.settings.FRAGMENT_CLASS"
++                android:value="com.android.settings.gestures.FullPowerMenuSettingsFragment" />
++            <meta-data android:name="com.android.settings.HIGHLIGHT_MENU_KEY"
++                android:value="@string/menu_key_system"/>
++            <meta-data android:name="com.android.settings.PRIMARY_PROFILE_CONTROLLED"
++                android:value="true" />
++        </activity>
++
+         <activity
+             android:name="Settings$GestureNavigationSettingsActivity"
+             android:label="@string/gesture_settings_activity_title"
+diff --git a/res/values/strings.xml b/res/values/strings.xml
+index a426c75666f2a98b464210163b807d7f42c244c3..bdfbeb61f3e3426de1c515c5fc37b2da01c8eb14 100644
+--- a/res/values/strings.xml
++++ b/res/values/strings.xml
+@@ -13839,7 +13839,70 @@
+     <string name="cards_passes_lower">cards &amp; passes</string>
+ 
+     <!-- Power menu setting name [CHAR LIMIT=60] -->
+-    <string name="power_menu_setting_name">Press &amp; hold power button</string>
++    <string name="power_menu_setting_name">Power menu</string>
++
++    <!-- Title text for lite power menu [CHAR LIMIT=60] -->
++    <string name="lite_power_menu_title">Lite power menu</string>
++    <!-- Summary text for lite power menu[CHAR LIMIT=NONE] -->
++    <string name="lite_power_menu_summary">Power menu with only power actions (like it is since A12).</string>
++
++    <!-- Title text for full power menu [CHAR LIMIT=60] -->
++    <string name="full_power_menu_title">Full power menu</string>
++    <!-- Summary text for full power menu  [CHAR LIMIT=NONE] -->
++    <string name="full_power_menu_summary">Power menu with power actions, wallet and device controls (just like it was in A11).</string>
++
++    <!-- Power menu setting option cards and passes [CHAR LIMIT=NONE] -->
++    <string name="power_menu_cards_passes">Show cards &amp; passes</string>
++
++    <!-- Power menu setting option device controls [CHAR LIMIT=NONE] -->
++    <string name="power_menu_device_controls">Show device controls</string>
++
++    <!-- Power menu setting option cards, passes, device controls [CHAR LIMIT=NONE] -->
++    <string name="power_menu_cards_passes_device_controls">Show cards, passes, and device controls</string>
++
++    <!-- Power menu setting lock screen category name [CHAR LIMIT=40] -->
++    <string name="power_menu_lock_screen_category">Lock screen</string>
++
++    <!-- Power menu setting option none [CHAR LIMIT=NONE] -->
++    <string name="power_menu_none">Don\u2019t show any content</string>
++
++    <!-- Power menu setting Privacy [CHAR LIMIT=40] -->
++    <string name="power_menu_privacy">Sensitive content</string>
++
++    <!-- Power menu setting privacy show all [CHAR LIMIT=NONE] -->
++    <string name="power_menu_privacy_show">Show cards and controls when locked</string>
++
++    <!-- Power menu setting privacy show controls [CHAR LIMIT=NONE] -->
++    <string name="power_menu_privacy_show_controls">Show controls when locked</string>
++
++    <!-- Power menu setting privacy show cards [CHAR LIMIT=NONE] -->
++    <string name="power_menu_privacy_show_cards">Show cards when locked</string>
++
++    <!-- Power menu setting privacy hide all [CHAR LIMIT=NONE] -->
++    <string name="power_menu_privacy_hide">Hide cards and controls when locked</string>
++
++    <!-- Power menu setting privacy no secure screen lock set [CHAR_LIMIT=NONE] -->
++    <string name="power_menu_privacy_not_secure">To use, first set a screen lock</string>
++
++    <!-- Device controls toggle name [CHAR LIMIT=60] -->
++    <string name="device_controls_setting_toggle">Show device controls</string>
++
++    <!-- Cards and passes toggle name [CHAR LIMIT=60] -->
++    <string name="cards_passes_setting_toggle">Show cards &amp; passes</string>
++
++    <!-- Device controls toggle subtitle [CHAR LIMIT=NONE] -->
++    <string name="device_controls_setting_subtitle">To access controls for connected devices, hold the Power button</string>
++
++    <!-- Cards and passes toggle subtitle [CHAR LIMIT=NONE] -->
++    <string name="cards_passes_setting_subtitle">To access things like your payment methods and boarding passes, press and hold the Power button.</string>
++
++    <!-- Text shown for the title of the lockdown option -->
++    <string name="lockdown_settings_title">Show lockdown option</string>
++    <!-- Text shown for the description of the lockdown option -->
++    <string name="lockdown_settings_summary">Display power button option that turns off Smart Lock, biometric unlocking, and notifications on the lock screen</string>
++
++    <!-- Hold for Assistant setting name [CHAR LIMIT=60] -->
++    <string name="hold_for_assistant_setting_name">Press &amp; hold power button</string>
+ 
+     <!-- Power menu setting section title for selecting the press and hold power button behavior. [CHAR LIMIT=60] -->
+     <string name="power_menu_long_press_category_title">Press &amp; hold power button to access</string>
+diff --git a/res/xml/full_power_menu_settings.xml b/res/xml/full_power_menu_settings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..9680f3fa11b25d1870d293d4226bc1fac885d7d2
+--- /dev/null
++++ b/res/xml/full_power_menu_settings.xml
+@@ -0,0 +1,42 @@
++<?xml version="1.0" encoding="utf-8"?>
++
++<!--
++  ~ Copyright (C) 2019 The Android Open Source Project
++  ~
++  ~ Licensed under the Apache License, Version 2.0 (the "License");
++  ~ you may not use this file except in compliance with the License.
++  ~ You may obtain a copy of the License at
++  ~
++  ~      http://www.apache.org/licenses/LICENSE-2.0
++  ~
++  ~ Unless required by applicable law or agreed to in writing, software
++  ~ distributed under the License is distributed on an "AS IS" BASIS,
++  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++  ~ See the License for the specific language governing permissions and
++  ~ limitations under the License
++  -->
++
++<PreferenceScreen
++    xmlns:android="http://schemas.android.com/apk/res/android"
++    xmlns:settings="http://schemas.android.com/apk/res-auto"
++    android:key="full_power_menu_settings_page"
++    android:title="@string/power_menu_setting_name">
++
++    <SwitchPreference
++        android:key="gesture_global_actions_panel_switch"
++        android:title="@string/cards_passes_setting_toggle"
++        android:summary="@string/cards_passes_setting_subtitle"
++        settings:controller="com.android.settings.gestures.GlobalActionsPanelPreferenceController" />
++
++    <SwitchPreference
++        android:key="gesture_device_controls_switch"
++        android:title="@string/device_controls_setting_toggle"
++        android:summary="@string/device_controls_setting_subtitle"
++        settings:controller="com.android.settings.gestures.DeviceControlsPreferenceController" />
++
++    <SwitchPreference
++        android:key="gesture_power_menu_privacy"
++        android:title="@string/power_menu_privacy"
++        settings:controller="com.android.settings.gestures.PowerMenuPrivacyPreferenceController" />
++</PreferenceScreen>
++
+diff --git a/res/xml/gestures.xml b/res/xml/gestures.xml
+index 48813606fe94551697c20b6d6629d4d0a086c87b..319e8930acd40c25ea541b0020ab2ccdccff2bd3 100644
+--- a/res/xml/gestures.xml
++++ b/res/xml/gestures.xml
+@@ -87,6 +87,12 @@
+         android:fragment="com.android.settings.gestures.PowerMenuSettings"
+         settings:controller="com.android.settings.gestures.PowerMenuPreferenceController" />
+ 
++    <Preference
++        android:key="gesture_hold_for_assistant_summary"
++        android:title="@string/hold_for_assistant_setting_name"
++        android:fragment="com.android.settings.gestures.HoldForAssistantSettings"
++        settings:controller="com.android.settings.gestures.HoldForAssistantPreferenceController" />
++
+     <com.android.settingslib.PrimarySwitchPreference
+         android:key="gesture_prevent_ringing_summary"
+         android:title="@string/gesture_prevent_ringing_screen_title"
+diff --git a/res/xml/hold_for_assistant_settings.xml b/res/xml/hold_for_assistant_settings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..74b749ad07422e3e8330ff3428c4e1ddc3180b52
+--- /dev/null
++++ b/res/xml/hold_for_assistant_settings.xml
+@@ -0,0 +1,59 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Copyright (C) 2020 The Android Open Source Project
++
++     Licensed under the Apache License, Version 2.0 (the "License");
++     you may not use this file except in compliance with the License.
++     You may obtain a copy of the License at
++          http://www.apache.org/licenses/LICENSE-2.0
++     Unless required by applicable law or agreed to in writing, software
++     distributed under the License is distributed on an "AS IS" BASIS,
++     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++     See the License for the specific language governing permissions and
++     limitations under the License.
++-->
++
++<PreferenceScreen
++    xmlns:android="http://schemas.android.com/apk/res/android"
++    xmlns:settings="http://schemas.android.com/apk/res-auto"
++    android:title="@string/power_menu_setting_name">
++
++    <!-- Animation uses embedded PNGs and lottie requires asset folder to be set despite
++         embedding. -->
++    <com.android.settingslib.widget.IllustrationPreference
++        android:key="gesture_power_menu_video"
++        settings:searchable="false"
++        settings:lottie_imageAssetsFolder="power_menu"
++        settings:lottie_rawRes="@raw/lottie_long_press_power_for_power_menu"
++        settings:controller="com.android.settings.gestures.LongPressPowerIllustrationPreferenceController"/>
++
++    <PreferenceCategory
++        android:key="gesture_power_menu_long_press_category"
++        android:title="@string/power_menu_long_press_category_title">
++        <com.android.settingslib.widget.SelectorWithWidgetPreference
++            android:key="gesture_power_menu_long_press_for_power_menu"
++            android:title="@string/power_menu_long_press_for_power_menu_title"
++            settings:controller="com.android.settings.gestures.LongPressPowerForPowerMenuPreferenceController"/>
++
++        <com.android.settingslib.widget.SelectorWithWidgetPreference
++            android:key="gesture_power_menu_long_press_for_assistant"
++            android:title="@string/power_menu_long_press_for_assistant_title"
++            settings:controller="com.android.settings.gestures.LongPressPowerForAssistantPreferenceController"/>
++    </PreferenceCategory>
++
++    <com.android.settings.widget.LabeledSeekBarPreference
++        android:key="gesture_power_menu_long_press_for_assist_sensitivity"
++        android:title="@string/power_menu_long_press_for_assist_sensitivity_title"
++        android:summary="@string/power_menu_long_press_for_assist_sensitivity_summary"
++        settings:allowDividerAbove="true"
++        settings:textStart="@string/power_menu_long_press_for_assist_sensitivity_low_label"
++        settings:textEnd="@string/power_menu_long_press_for_assist_sensitivity_high_label"
++        settings:controller="com.android.settings.gestures.LongPressPowerSensitivityPreferenceController"
++        />
++
++    <com.android.settingslib.widget.FooterPreference
++        android:key="power_menu_power_volume_up_hint"
++        android:title="@string/power_menu_power_volume_up_hint"
++        android:selectable="false"
++        settings:searchable="false"
++        settings:controller="com.android.settings.gestures.LongPressPowerFooterPreferenceController"/>
++</PreferenceScreen>
+diff --git a/res/xml/power_menu_settings.xml b/res/xml/power_menu_settings.xml
+index 48cc40c0bd49106dabb4a804e9de373732a57264..b85afa1ca2d3382d90b3c617fb7b71a3fa53f450 100644
+--- a/res/xml/power_menu_settings.xml
++++ b/res/xml/power_menu_settings.xml
+@@ -14,46 +14,4 @@
+ 
+ <PreferenceScreen
+     xmlns:android="http://schemas.android.com/apk/res/android"
+-    xmlns:settings="http://schemas.android.com/apk/res-auto"
+-    android:title="@string/power_menu_setting_name">
+-
+-    <!-- Animation uses embedded PNGs and lottie requires asset folder to be set despite
+-         embedding. -->
+-    <com.android.settingslib.widget.IllustrationPreference
+-        android:key="gesture_power_menu_video"
+-        settings:searchable="false"
+-        settings:lottie_imageAssetsFolder="power_menu"
+-        settings:lottie_rawRes="@raw/lottie_long_press_power_for_power_menu"
+-        settings:controller="com.android.settings.gestures.LongPressPowerIllustrationPreferenceController"/>
+-
+-    <PreferenceCategory
+-        android:key="gesture_power_menu_long_press_category"
+-        android:title="@string/power_menu_long_press_category_title">
+-        <com.android.settingslib.widget.SelectorWithWidgetPreference
+-            android:key="gesture_power_menu_long_press_for_power_menu"
+-            android:title="@string/power_menu_long_press_for_power_menu_title"
+-            settings:controller="com.android.settings.gestures.LongPressPowerForPowerMenuPreferenceController"/>
+-
+-        <com.android.settingslib.widget.SelectorWithWidgetPreference
+-            android:key="gesture_power_menu_long_press_for_assistant"
+-            android:title="@string/power_menu_long_press_for_assistant_title"
+-            settings:controller="com.android.settings.gestures.LongPressPowerForAssistantPreferenceController"/>
+-    </PreferenceCategory>
+-
+-    <com.android.settings.widget.LabeledSeekBarPreference
+-        android:key="gesture_power_menu_long_press_for_assist_sensitivity"
+-        android:title="@string/power_menu_long_press_for_assist_sensitivity_title"
+-        android:summary="@string/power_menu_long_press_for_assist_sensitivity_summary"
+-        settings:allowDividerAbove="true"
+-        settings:textStart="@string/power_menu_long_press_for_assist_sensitivity_low_label"
+-        settings:textEnd="@string/power_menu_long_press_for_assist_sensitivity_high_label"
+-        settings:controller="com.android.settings.gestures.LongPressPowerSensitivityPreferenceController"
+-    />
+-
+-    <com.android.settingslib.widget.FooterPreference
+-        android:key="power_menu_power_volume_up_hint"
+-        android:title="@string/power_menu_power_volume_up_hint"
+-        android:selectable="false"
+-        settings:searchable="false"
+-        settings:controller="com.android.settings.gestures.LongPressPowerFooterPreferenceController"/>
+-</PreferenceScreen>
++    android:title="@string/power_menu_setting_name" />
+\ No newline at end of file
+diff --git a/src/com/android/settings/Settings.java b/src/com/android/settings/Settings.java
+index 50ffdc720eb2eef1cf6006620f87b799e3931f40..4bad9df6c9d967fcb6a36455cb94a7b0473dd85c 100644
+--- a/src/com/android/settings/Settings.java
++++ b/src/com/android/settings/Settings.java
+@@ -377,6 +377,7 @@ public class Settings extends SettingsActivity {
+     public static class WifiCallingDisclaimerActivity extends SettingsActivity { /* empty */ }
+     public static class MobileNetworkListActivity extends SettingsActivity {}
+     public static class PowerMenuSettingsActivity extends SettingsActivity {}
++    public static class FullPowerMenuSettingsActivity extends SettingsActivity { /* empty */ }
+     public static class MobileNetworkActivity extends SettingsActivity {
+ 
+         public static final String TAG = "MobileNetworkActivity";
+diff --git a/src/com/android/settings/core/gateway/SettingsGateway.java b/src/com/android/settings/core/gateway/SettingsGateway.java
+index dc746ce8e649ebfe52c94087f964aac23d5d374a..5390ac863752abe42427f9ca0fdd6b0120878102 100644
+--- a/src/com/android/settings/core/gateway/SettingsGateway.java
++++ b/src/com/android/settings/core/gateway/SettingsGateway.java
+@@ -107,6 +107,7 @@ import com.android.settings.gestures.ButtonNavigationSettingsFragment;
+ import com.android.settings.gestures.DoubleTapPowerSettings;
+ import com.android.settings.gestures.DoubleTapScreenSettings;
+ import com.android.settings.gestures.DoubleTwistGestureSettings;
++import com.android.settings.gestures.FullPowerMenuSettingsFragment;
+ import com.android.settings.gestures.GestureNavigationSettingsFragment;
+ import com.android.settings.gestures.OneHandedSettings;
+ import com.android.settings.gestures.PickupGestureSettings;
+@@ -329,6 +330,7 @@ public class SettingsGateway {
+             BatterySaverScheduleSettings.class.getName(),
+             MobileNetworkListFragment.class.getName(),
+             PowerMenuSettings.class.getName(),
++            FullPowerMenuSettingsFragment.class.getName(),
+             DarkModeSettingsFragment.class.getName(),
+             BugReportHandlerPicker.class.getName(),
+             GestureNavigationSettingsFragment.class.getName(),
+diff --git a/src/com/android/settings/gestures/DeviceControlsPreferenceController.java b/src/com/android/settings/gestures/DeviceControlsPreferenceController.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..25a6e366ade13d7899dc72a35a41af89948af940
+--- /dev/null
++++ b/src/com/android/settings/gestures/DeviceControlsPreferenceController.java
+@@ -0,0 +1,66 @@
++/*
++ * Copyright (C) 2020 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.settings.gestures;
++
++import android.content.Context;
++import android.content.pm.PackageManager;
++import android.provider.Settings;
++
++import androidx.preference.Preference;
++
++import com.android.settings.R;
++import com.android.settings.core.TogglePreferenceController;
++
++public class DeviceControlsPreferenceController extends TogglePreferenceController {
++    private static final String ENABLED_SETTING = Settings.Secure.CONTROLS_ENABLED;
++
++    public DeviceControlsPreferenceController(Context context, String key) {
++        super(context, key);
++    }
++
++    @Override
++    public boolean isChecked() {
++        return Settings.Secure.getInt(mContext.getContentResolver(), ENABLED_SETTING, 1) == 1;
++    }
++
++    @Override
++    public boolean setChecked(boolean isChecked) {
++        return Settings.Secure.putInt(mContext.getContentResolver(), ENABLED_SETTING,
++                isChecked ? 1 : 0);
++    }
++
++    @Override
++    public int getAvailabilityStatus() {
++        return isControlsAvailable() ? AVAILABLE : DISABLED_DEPENDENT_SETTING;
++    }
++
++    @Override
++    public void updateState(Preference preference) {
++        super.updateState(preference);
++        preference.setEnabled(getAvailabilityStatus() != DISABLED_DEPENDENT_SETTING);
++        refreshSummary(preference);
++    }
++
++    @Override
++    public int getSliceHighlightMenuRes() {
++        return R.string.menu_key_system;
++    }
++
++    private boolean isControlsAvailable() {
++        return mContext.getPackageManager().hasSystemFeature(PackageManager.FEATURE_CONTROLS);
++    }
++}
+diff --git a/src/com/android/settings/gestures/FullPowerMenuSettingsFragment.java b/src/com/android/settings/gestures/FullPowerMenuSettingsFragment.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..5c4902de3bc4faa42a273a6a1702e4e95869afdc
+--- /dev/null
++++ b/src/com/android/settings/gestures/FullPowerMenuSettingsFragment.java
+@@ -0,0 +1,85 @@
++/*
++ * Copyright (C) 2019 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.settings.gestures;
++
++import android.os.Bundle;
++
++import androidx.preference.Preference;
++import androidx.preference.PreferenceScreen;
++
++import com.android.settings.R;
++import com.android.settings.dashboard.DashboardFragment;
++import com.android.settings.search.BaseSearchIndexProvider;
++import com.android.settingslib.search.SearchIndexable;
++
++import java.util.Objects;
++
++@SearchIndexable
++public class FullPowerMenuSettingsFragment extends DashboardFragment {
++
++    public static final String TAG = "FullPowerMenuSettingsFragment";
++
++    public static final String FULL_POWER_MENU_SETTINGS =
++            "com.android.settings.FULL_POWER_MENU_SETTINGS";
++
++    @Override
++    public void onCreate(Bundle icicle) {
++        super.onCreate(icicle);
++
++        PreferenceScreen screen = getPreferenceScreen();
++
++        GlobalActionsPanelPreferenceController panelController = use(GlobalActionsPanelPreferenceController.class);
++        Preference panelPreference = Objects.requireNonNull(screen.findPreference(panelController.getPreferenceKey()));
++
++        DeviceControlsPreferenceController deviceControlsController = use(DeviceControlsPreferenceController.class);
++        Preference deviceControlsPreference = Objects.requireNonNull(screen.findPreference(deviceControlsController.getPreferenceKey()));
++
++        PowerMenuPrivacyPreferenceController privacyController = use(PowerMenuPrivacyPreferenceController.class);
++        Preference privacyPreference = Objects.requireNonNull(screen.findPreference(privacyController.getPreferenceKey()));
++
++        Preference.OnPreferenceChangeListener listener = (preference, o) -> {
++            privacyController.updateState(privacyPreference);
++            return true;
++        };
++
++        addOnPreferenceChangeListener(panelPreference, listener);
++        addOnPreferenceChangeListener(deviceControlsPreference, listener);
++    }
++
++    public void addOnPreferenceChangeListener(Preference preference, Preference.OnPreferenceChangeListener listener) {
++        Preference.OnPreferenceChangeListener original = preference.getOnPreferenceChangeListener();
++        preference.setOnPreferenceChangeListener((p, newValue) -> original.onPreferenceChange(p, newValue) && listener.onPreferenceChange(p, newValue));
++    }
++
++    @Override
++    protected int getPreferenceScreenResId() {
++        return R.xml.full_power_menu_settings;
++    }
++
++    @Override
++    protected String getLogTag() {
++        return TAG;
++    }
++
++    @Override
++    public int getMetricsCategory() {
++        return METRICS_CATEGORY_UNKNOWN;
++    }
++
++    public static final BaseSearchIndexProvider SEARCH_INDEX_DATA_PROVIDER =
++            new BaseSearchIndexProvider(R.xml.full_power_menu_settings);
++}
+diff --git a/src/com/android/settings/gestures/HoldForAssistantPreferenceController.java b/src/com/android/settings/gestures/HoldForAssistantPreferenceController.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..d77b5937424ce220d4536fb27fb6cc2fc03563ab
+--- /dev/null
++++ b/src/com/android/settings/gestures/HoldForAssistantPreferenceController.java
+@@ -0,0 +1,45 @@
++/*
++ * Copyright (C) 2020 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.settings.gestures;
++
++import android.content.Context;
++
++import com.android.settings.R;
++import com.android.settings.core.BasePreferenceController;
++
++public class HoldForAssistantPreferenceController extends BasePreferenceController {
++
++    public HoldForAssistantPreferenceController(Context context, String key) {
++        super(context, key);
++    }
++
++    @Override
++    public CharSequence getSummary() {
++        if (PowerMenuSettingsUtils.isLongPressPowerForAssistantEnabled(mContext)) {
++            return mContext.getText(R.string.power_menu_summary_long_press_for_assistant);
++        } else {
++            return mContext.getText(R.string.power_menu_summary_long_press_for_power_menu);
++        }
++    }
++
++    @Override
++    public int getAvailabilityStatus() {
++        return PowerMenuSettingsUtils.isLongPressPowerSettingAvailable(mContext)
++                ? AVAILABLE
++                : UNSUPPORTED_ON_DEVICE;
++    }
++}
+diff --git a/src/com/android/settings/gestures/HoldForAssistantSettings.java b/src/com/android/settings/gestures/HoldForAssistantSettings.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..a70c0b734180274e0f0fa1ad75c36410de62386a
+--- /dev/null
++++ b/src/com/android/settings/gestures/HoldForAssistantSettings.java
+@@ -0,0 +1,48 @@
++/*
++ * Copyright (C) 2020 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.settings.gestures;
++
++import android.app.settings.SettingsEnums;
++
++import com.android.settings.R;
++import com.android.settings.dashboard.DashboardFragment;
++import com.android.settings.search.BaseSearchIndexProvider;
++import com.android.settingslib.search.SearchIndexable;
++
++@SearchIndexable
++public class HoldForAssistantSettings extends DashboardFragment {
++
++    private static final String TAG = "HoldForAssistantSettings";
++
++    @Override
++    protected int getPreferenceScreenResId() {
++        return R.xml.hold_for_assistant_settings;
++    }
++
++    @Override
++    protected String getLogTag() {
++        return TAG;
++    }
++
++    @Override
++    public int getMetricsCategory() {
++        return SettingsEnums.POWER_MENU_SETTINGS;
++    }
++
++    public static final BaseSearchIndexProvider SEARCH_INDEX_DATA_PROVIDER =
++            new BaseSearchIndexProvider(R.xml.hold_for_assistant_settings);
++}
+diff --git a/src/com/android/settings/gestures/PowerMenuPreferenceController.java b/src/com/android/settings/gestures/PowerMenuPreferenceController.java
+index 599dd18b9d376d7be6bfae8f5ba029f9c338fac3..f252abc18ba236eb0872017e9836aa03599a25d4 100644
+--- a/src/com/android/settings/gestures/PowerMenuPreferenceController.java
++++ b/src/com/android/settings/gestures/PowerMenuPreferenceController.java
+@@ -17,11 +17,14 @@
+ package com.android.settings.gestures;
+ 
+ import android.content.Context;
++import android.provider.Settings;
+ 
+ import com.android.settings.R;
+ import com.android.settings.core.BasePreferenceController;
+ 
+ public class PowerMenuPreferenceController extends BasePreferenceController {
++    public static final int POWER_MENU_TYPE_LITE = 0;
++    public static final int POWER_MENU_TYPE_FULL = 1;
+ 
+     public PowerMenuPreferenceController(Context context, String key) {
+         super(context, key);
+@@ -29,17 +32,21 @@ public class PowerMenuPreferenceController extends BasePreferenceController {
+ 
+     @Override
+     public CharSequence getSummary() {
+-        if (PowerMenuSettingsUtils.isLongPressPowerForAssistantEnabled(mContext)) {
+-            return mContext.getText(R.string.power_menu_summary_long_press_for_assistant);
+-        } else {
+-            return mContext.getText(R.string.power_menu_summary_long_press_for_power_menu);
++        int powerMenuType = Settings.Secure.getInt(mContext.getContentResolver(),
++                Settings.Secure.POWER_MENU_TYPE, POWER_MENU_TYPE_LITE);
++
++        switch (powerMenuType) {
++            case POWER_MENU_TYPE_LITE:
++            default:
++                return mContext.getText(R.string.lite_power_menu_title);
++
++            case POWER_MENU_TYPE_FULL:
++                return mContext.getText(R.string.full_power_menu_title);
+         }
+     }
+ 
+     @Override
+     public int getAvailabilityStatus() {
+-        return PowerMenuSettingsUtils.isLongPressPowerSettingAvailable(mContext)
+-                ? AVAILABLE
+-                : UNSUPPORTED_ON_DEVICE;
++        return AVAILABLE;
+     }
+ }
+diff --git a/src/com/android/settings/gestures/PowerMenuPrivacyPreferenceController.java b/src/com/android/settings/gestures/PowerMenuPrivacyPreferenceController.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..6bcc9e80bb26260d03dde64e4a887a2075ca5350
+--- /dev/null
++++ b/src/com/android/settings/gestures/PowerMenuPrivacyPreferenceController.java
+@@ -0,0 +1,115 @@
++/*
++ * Copyright (C) 2020 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.settings.gestures;
++
++import android.content.ContentResolver;
++import android.content.Context;
++import android.content.pm.PackageManager;
++import android.os.UserHandle;
++import android.provider.Settings;
++
++import androidx.preference.Preference;
++
++import com.android.internal.widget.LockPatternUtils;
++import com.android.settings.R;
++import com.android.settings.core.TogglePreferenceController;
++import com.android.settings.overlay.FeatureFactory;
++
++public class PowerMenuPrivacyPreferenceController extends TogglePreferenceController {
++
++    private static final String SETTING_KEY = Settings.Secure.POWER_MENU_LOCKED_SHOW_CONTENT;
++    private static final String CARDS_AVAILABLE_KEY =
++            Settings.Secure.GLOBAL_ACTIONS_PANEL_AVAILABLE;
++    private static final String CARDS_ENABLED_KEY = Settings.Secure.GLOBAL_ACTIONS_PANEL_ENABLED;
++    private static final String CONTROLS_ENABLED_KEY = Settings.Secure.CONTROLS_ENABLED;
++
++
++    public PowerMenuPrivacyPreferenceController(Context context,
++            String preferenceKey) {
++        super(context, preferenceKey);
++    }
++
++    @Override
++    public boolean isChecked() {
++        return Settings.Secure.getInt(mContext.getContentResolver(), SETTING_KEY, 0) != 0;
++    }
++
++    @Override
++    public boolean setChecked(boolean isChecked) {
++        return Settings.Secure.putInt(mContext.getContentResolver(), SETTING_KEY,
++                isChecked ? 1 : 0);
++    }
++
++    @Override
++    public CharSequence getSummary() {
++        boolean cardsAvailable = Settings.Secure.getInt(mContext.getContentResolver(),
++                CARDS_AVAILABLE_KEY, 0) != 0;
++        boolean controlsAvailable = isControlsAvailable();
++        final int res;
++        if (!isSecure()) {
++            res = R.string.power_menu_privacy_not_secure;
++        } else if (cardsAvailable && controlsAvailable) {
++            res = R.string.power_menu_privacy_show;
++        } else if (!cardsAvailable && controlsAvailable) {
++            res = R.string.power_menu_privacy_show_controls;
++        } else if (cardsAvailable) {
++            res = R.string.power_menu_privacy_show_cards;
++        } else {
++            // In this case, neither cards nor controls are available. This preference should not
++            // be accessible as the power menu setting is not accessible
++            return "";
++        }
++        return mContext.getText(res);
++    }
++
++    @Override
++    public void updateState(Preference preference) {
++        super.updateState(preference);
++        preference.setEnabled(getAvailabilityStatus() != DISABLED_DEPENDENT_SETTING);
++        refreshSummary(preference);
++    }
++
++    @Override
++    public int getSliceHighlightMenuRes() {
++        return R.string.menu_key_system;
++    }
++
++    @Override
++    public int getAvailabilityStatus() {
++        return isSecure() && isEnabled() ? AVAILABLE : DISABLED_DEPENDENT_SETTING;
++    }
++
++    private boolean isSecure() {
++        final LockPatternUtils utils = FeatureFactory.getFactory(mContext)
++                .getSecurityFeatureProvider()
++                .getLockPatternUtils(mContext);
++        int userId = UserHandle.myUserId();
++        return utils.isSecure(userId);
++    }
++
++    private boolean isEnabled() {
++        final ContentResolver resolver = mContext.getContentResolver();
++        boolean cardsAvailable = Settings.Secure.getInt(resolver, CARDS_AVAILABLE_KEY, 0) != 0;
++        boolean cardsEnabled = Settings.Secure.getInt(resolver, CARDS_ENABLED_KEY, 0) != 0;
++        boolean controlsEnabled = Settings.Secure.getInt(resolver, CONTROLS_ENABLED_KEY, 1) != 0;
++        return (cardsAvailable && cardsEnabled) || (isControlsAvailable() && controlsEnabled);
++    }
++
++    private boolean isControlsAvailable() {
++        return mContext.getPackageManager().hasSystemFeature(PackageManager.FEATURE_CONTROLS);
++    }
++}
+diff --git a/src/com/android/settings/gestures/PowerMenuSettings.java b/src/com/android/settings/gestures/PowerMenuSettings.java
+index 6a8458db6c8868a869c572a8b906275780984a4b..d1aa5d5b60e6423bf1ca3fb5f50aa54634c8d792 100644
+--- a/src/com/android/settings/gestures/PowerMenuSettings.java
++++ b/src/com/android/settings/gestures/PowerMenuSettings.java
+@@ -16,17 +16,75 @@
+ 
+ package com.android.settings.gestures;
+ 
++import static com.android.settings.gestures.PowerMenuPreferenceController.POWER_MENU_TYPE_FULL;
++import static com.android.settings.gestures.PowerMenuPreferenceController.POWER_MENU_TYPE_LITE;
++
+ import android.app.settings.SettingsEnums;
++import android.content.Context;
++import android.content.Intent;
++import android.content.res.Resources;
++import android.provider.Settings;
++
++import androidx.preference.PreferenceScreen;
+ 
+ import com.android.settings.R;
+-import com.android.settings.dashboard.DashboardFragment;
+ import com.android.settings.search.BaseSearchIndexProvider;
++import com.android.settings.utils.CandidateInfoExtra;
++import com.android.settings.widget.RadioButtonPickerFragment;
+ import com.android.settingslib.search.SearchIndexable;
++import com.android.settingslib.search.SearchIndexableRaw;
++import com.android.settingslib.widget.CandidateInfo;
++import com.android.settingslib.widget.SelectorWithWidgetPreference;
++
++import java.util.ArrayList;
++import java.util.List;
+ 
+ @SearchIndexable
+-public class PowerMenuSettings extends DashboardFragment {
++public class PowerMenuSettings extends RadioButtonPickerFragment {
++
++    private static final String KEY_POWER_MENU_LITE = "power_menu_lite";
++    private static final String KEY_POWER_MENU_FULL = "power_menu_full";
++
++    @Override
++    public int getMetricsCategory() {
++        return SettingsEnums.POWER_MENU_SETTINGS;
++    }
+ 
+-    private static final String TAG = "PowerMenuSettings";
++    @Override
++    public void updateCandidates() {
++        final String defaultKey = getDefaultKey();
++        final String systemDefaultKey = getSystemDefaultKey();
++        final PreferenceScreen screen = getPreferenceScreen();
++        screen.removeAll();
++
++        final List<? extends CandidateInfo> candidateList = getCandidates();
++        if (candidateList == null) {
++            return;
++        }
++        for (CandidateInfo info : candidateList) {
++            SelectorWithWidgetPreference pref =
++                    new SelectorWithWidgetPreference(getPrefContext());
++            bindPreference(pref, info.getKey(), info, defaultKey);
++            bindPreferenceExtra(pref, info.getKey(), info, defaultKey, systemDefaultKey);
++            screen.addPreference(pref);
++        }
++        mayCheckOnlyRadioButton();
++    }
++
++    @Override
++    public void bindPreferenceExtra(SelectorWithWidgetPreference pref,
++            String key, CandidateInfo info, String defaultKey, String systemDefaultKey) {
++        if (!(info instanceof CandidateInfoExtra)) {
++            return;
++        }
++
++        pref.setSummary(((CandidateInfoExtra) info).loadSummary());
++
++        if (KEY_POWER_MENU_FULL.equals(info.getKey())) {
++            pref.setExtraWidgetOnClickListener((v) -> startActivity(new Intent(
++                    FullPowerMenuSettingsFragment.FULL_POWER_MENU_SETTINGS)));
++        }
++    }
+ 
+     @Override
+     protected int getPreferenceScreenResId() {
+@@ -34,15 +92,87 @@ public class PowerMenuSettings extends DashboardFragment {
+     }
+ 
+     @Override
+-    protected String getLogTag() {
+-        return TAG;
++    protected List<? extends CandidateInfo> getCandidates() {
++        final Context c = getContext();
++        List<CandidateInfoExtra> candidates = new ArrayList<>();
++
++        candidates.add(new CandidateInfoExtra(
++                c.getText(R.string.lite_power_menu_title),
++                c.getText(R.string.lite_power_menu_summary),
++                KEY_POWER_MENU_LITE, true /* enabled */));
++
++        candidates.add(new CandidateInfoExtra(
++                c.getText(R.string.full_power_menu_title),
++                c.getText(R.string.full_power_menu_summary),
++                KEY_POWER_MENU_FULL, true /* enabled */));
++
++        return candidates;
+     }
+ 
+     @Override
+-    public int getMetricsCategory() {
+-        return SettingsEnums.POWER_MENU_SETTINGS;
++    protected String getDefaultKey() {
++        return getCurrentSystemPowerMenuType(getContext());
++    }
++
++    @Override
++    protected boolean setDefaultKey(String key) {
++        setCurrentSystemPowerMenuType(getContext(), key);
++        return true;
++    }
++
++    private static String getCurrentSystemPowerMenuType(Context context) {
++        int powerMenuType = Settings.Secure.getInt(context.getContentResolver(),
++                Settings.Secure.POWER_MENU_TYPE, POWER_MENU_TYPE_LITE);
++
++        switch (powerMenuType) {
++            case POWER_MENU_TYPE_LITE:
++            default:
++                return KEY_POWER_MENU_LITE;
++
++            case POWER_MENU_TYPE_FULL:
++                return KEY_POWER_MENU_FULL;
++        }
++    }
++
++    private static void setCurrentSystemPowerMenuType(Context context, String key) {
++        int powerMenuType;
++        switch (key) {
++            case KEY_POWER_MENU_LITE:
++            default:
++                powerMenuType = POWER_MENU_TYPE_LITE;
++                break;
++            case KEY_POWER_MENU_FULL:
++                powerMenuType = POWER_MENU_TYPE_FULL;
++                break;
++        }
++
++        Settings.Secure.putInt(context.getContentResolver(),
++                Settings.Secure.POWER_MENU_TYPE, powerMenuType);
+     }
+ 
+     public static final BaseSearchIndexProvider SEARCH_INDEX_DATA_PROVIDER =
+-            new BaseSearchIndexProvider(R.xml.power_menu_settings);
++            new BaseSearchIndexProvider(R.xml.power_menu_settings) {
++                @Override
++                public List<SearchIndexableRaw> getRawDataToIndex(Context context,
++                        boolean enabled) {
++                    final Resources res = context.getResources();
++                    final List<SearchIndexableRaw> result = new ArrayList<>();
++
++                    {
++                        SearchIndexableRaw data = new SearchIndexableRaw(context);
++                        data.title = res.getString(R.string.lite_power_menu_title);
++                        data.key = KEY_POWER_MENU_LITE;
++                        result.add(data);
++                    }
++
++                    {
++                        SearchIndexableRaw data = new SearchIndexableRaw(context);
++                        data.title = res.getString(R.string.full_power_menu_title);
++                        data.key = KEY_POWER_MENU_FULL;
++                        result.add(data);
++                    }
++
++                    return result;
++                }
++            };
+ }
+diff --git a/src/com/android/settings/search/CustomSiteMapRegistry.java b/src/com/android/settings/search/CustomSiteMapRegistry.java
+index 1777cb83b62407ad18c5a67e9b566b318edcd027..54bea18e3cbabb2dfd23ab3752e1ae76ae2cede8 100644
+--- a/src/com/android/settings/search/CustomSiteMapRegistry.java
++++ b/src/com/android/settings/search/CustomSiteMapRegistry.java
+@@ -23,7 +23,9 @@ import com.android.settings.connecteddevice.ConnectedDeviceDashboardFragment;
+ import com.android.settings.connecteddevice.usb.UsbDetailsFragment;
+ import com.android.settings.fuelgauge.batteryusage.PowerUsageAdvanced;
+ import com.android.settings.fuelgauge.batteryusage.PowerUsageSummary;
++import com.android.settings.gestures.FullPowerMenuSettingsFragment;
+ import com.android.settings.gestures.GestureNavigationSettingsFragment;
++import com.android.settings.gestures.PowerMenuSettings;
+ import com.android.settings.gestures.SystemNavigationGestureSettings;
+ import com.android.settings.location.LocationSettings;
+ import com.android.settings.location.RecentLocationAccessSeeAllFragment;
+@@ -63,5 +65,7 @@ public class CustomSiteMapRegistry {
+                 ZenModeRestrictNotificationsSettings.class.getName());
+         CUSTOM_SITE_MAP.put(GestureNavigationSettingsFragment.class.getName(),
+                 SystemNavigationGestureSettings.class.getName());
++        CUSTOM_SITE_MAP.put(FullPowerMenuSettingsFragment.class.getName(),
++                PowerMenuSettings.class.getName());
+     }
+ }

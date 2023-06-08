@@ -1,0 +1,20 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: js6pak <me@6pak.dev>
+Date: Wed, 7 Jun 2023 01:56:13 +0200
+Subject: [PATCH] Add kernelsu module when WITH_KERNELSU is true
+
+Feature: kernelsu
+
+diff --git a/x86_64-kernel.mk b/x86_64-kernel.mk
+index 5fa6f9c4d24fd2bc6a5b63247e2ec1e9cfadd5d0..56448a2f03b6e729b243bdd20e1fc4aabf8e75d7 100644
+--- a/x86_64-kernel.mk
++++ b/x86_64-kernel.mk
+@@ -33,4 +33,8 @@ BOARD_VENDOR_KERNEL_MODULES := \
+ BOARD_VENDOR_KERNEL_MODULES_BLOCKLIST_FILE := \
+     device/generic/goldfish/kernel_modules.blocklist
+ 
++ifeq ($(WITH_KERNELSU),true)
++BOARD_VENDOR_RAMDISK_KERNEL_MODULES += $(KERNEL_ARTIFACTS_PATH)/kernelsu/kernelsu.ko
++endif
++
+ EMULATOR_KERNEL_FILE := $(KERNEL_ARTIFACTS_PATH)/kernel-$(TARGET_KERNEL_USE)

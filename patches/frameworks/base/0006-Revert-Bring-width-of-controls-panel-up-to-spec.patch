@@ -1,0 +1,102 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: js6pak <me@6pak.dev>
+Date: Fri, 23 Jun 2023 17:16:50 +0200
+Subject: [PATCH] Revert "Bring width of controls panel up to spec"
+
+This reverts commit d2f43a85
+
+Feature: full-power-menu
+
+diff --git a/packages/SystemUI/res/layout/controls_with_favorites.xml b/packages/SystemUI/res/layout/controls_with_favorites.xml
+index aa211bf8cfdc8f57162ec3338ffd4a576b98437f..ded6f9386503dde171d199030b5fa069b8840d8a 100644
+--- a/packages/SystemUI/res/layout/controls_with_favorites.xml
++++ b/packages/SystemUI/res/layout/controls_with_favorites.xml
+@@ -20,6 +20,7 @@
+       android:layout_width="match_parent"
+       android:layout_height="wrap_content"
+       android:orientation="horizontal"
++      android:layout_marginTop="@dimen/controls_top_margin"
+       android:layout_marginBottom="@dimen/controls_header_bottom_margin">
+ 
+     <!-- make sure the header stays centered in the layout by adding a spacer -->
+@@ -77,7 +78,6 @@
+         android:layout_weight="1"
+         android:orientation="vertical"
+         android:clipChildren="true"
+-        android:paddingHorizontal="16dp"
+         android:scrollbars="none">
+     <include layout="@layout/global_actions_controls_list_view" />
+ 
+@@ -88,6 +88,8 @@
+       android:layout_width="match_parent"
+       android:layout_height="0dp"
+       android:layout_weight="1"
++      android:layout_marginLeft="@dimen/global_actions_side_margin"
++      android:layout_marginRight="@dimen/global_actions_side_margin"
+       android:background="@drawable/controls_panel_background"
+       android:visibility="gone"
+       />
+diff --git a/packages/SystemUI/res/values-land/dimens.xml b/packages/SystemUI/res/values-land/dimens.xml
+index 73867fd5238a1c9dd907db65efd5787c6fdb2f46..ca78c953c704b2ebe74f87233b3085472c531ca1 100644
+--- a/packages/SystemUI/res/values-land/dimens.xml
++++ b/packages/SystemUI/res/values-land/dimens.xml
+@@ -63,6 +63,7 @@
+     <dimen name="large_dialog_width">348dp</dimen>
+ 
+     <dimen name="qs_panel_padding_top">@dimen/qqs_layout_margin_top</dimen>
++    <dimen name="qs_panel_padding_top_combined_headers">@dimen/qs_panel_padding_top</dimen>
+ 
+     <dimen name="controls_padding_horizontal">16dp</dimen>
+ 
+diff --git a/packages/SystemUI/res/values-sw600dp/dimens.xml b/packages/SystemUI/res/values-sw600dp/dimens.xml
+index 7cd147099e9c829a840e949a73f133f90ce625b4..6da2691726a4f3f852b0d867620ff695b1d5fd1c 100644
+--- a/packages/SystemUI/res/values-sw600dp/dimens.xml
++++ b/packages/SystemUI/res/values-sw600dp/dimens.xml
+@@ -52,6 +52,9 @@
+     <!-- Text size for user name in user switcher -->
+     <dimen name="kg_user_switcher_text_size">18sp</dimen>
+ 
++    <dimen name="controls_header_bottom_margin">12dp</dimen>
++    <dimen name="controls_top_margin">24dp</dimen>
++
+     <dimen name="global_actions_grid_item_layout_height">80dp</dimen>
+ 
+     <dimen name="qs_brightness_margin_bottom">16dp</dimen>
+diff --git a/packages/SystemUI/res/values-sw720dp-land/dimens.xml b/packages/SystemUI/res/values-sw720dp-land/dimens.xml
+index 9ed936050aa24806697613d4e91cfc59522f6c5a..b216f4aa4c6edde2498ef96362781ba8d6b54965 100644
+--- a/packages/SystemUI/res/values-sw720dp-land/dimens.xml
++++ b/packages/SystemUI/res/values-sw720dp-land/dimens.xml
+@@ -17,6 +17,7 @@
+ */
+ -->
+ <resources>
++    <dimen name="controls_padding_horizontal">205dp</dimen>
+     <dimen name="split_shade_notifications_scrim_margin_bottom">24dp</dimen>
+     <dimen name="notification_panel_margin_bottom">64dp</dimen>
+ 
+diff --git a/packages/SystemUI/res/values-sw720dp/dimens.xml b/packages/SystemUI/res/values-sw720dp/dimens.xml
+index 8f59df655c3ad4276312343ace2a21ede8f2ce23..927059aa7e4004b9a67039178d39971228afe5f5 100644
+--- a/packages/SystemUI/res/values-sw720dp/dimens.xml
++++ b/packages/SystemUI/res/values-sw720dp/dimens.xml
+@@ -19,7 +19,7 @@
+     <!-- gap on either side of status bar notification icons -->
+     <dimen name="status_bar_icon_padding">1dp</dimen>
+ 
+-    <dimen name="controls_padding_horizontal">40dp</dimen>
++    <dimen name="controls_padding_horizontal">75dp</dimen>
+ 
+     <dimen name="large_screen_shade_header_height">56dp</dimen>
+ 
+diff --git a/packages/SystemUI/res/values/dimens.xml b/packages/SystemUI/res/values/dimens.xml
+index 9aa8a2d2a02894c7f89d51bbf7338891ff82d4cd..7039215c5d6ddccc3fb9a4fcc1511ba703f65498 100644
+--- a/packages/SystemUI/res/values/dimens.xml
++++ b/packages/SystemUI/res/values/dimens.xml
+@@ -1166,7 +1166,7 @@
+ 
+     <!-- Home Controls -->
+     <dimen name="controls_header_menu_size">48dp</dimen>
+-    <dimen name="controls_header_bottom_margin">16dp</dimen>
++    <dimen name="controls_header_bottom_margin">24dp</dimen>
+     <dimen name="controls_header_app_icon_size">24dp</dimen>
+     <dimen name="controls_top_margin">48dp</dimen>
+     <dimen name="controls_padding_horizontal">0dp</dimen>

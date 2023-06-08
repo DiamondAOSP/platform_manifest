@@ -1,0 +1,23 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: js6pak <me@6pak.dev>
+Date: Sun, 23 Jul 2023 01:37:12 +0200
+Subject: [PATCH] Use the same kernel files for both release and debug variants
+
+
+diff --git a/device-redfin.mk b/device-redfin.mk
+index 7abde930e518b4dfead734e4fc07e38c4a739d23..02f389be4a2b02ada738dac0c432af3f51a1ca0a 100644
+--- a/device-redfin.mk
++++ b/device-redfin.mk
+@@ -17,11 +17,7 @@
+ PRODUCT_HARDWARE := redfin
+ 
+ ifeq ($(TARGET_PREBUILT_KERNEL),)
+-    ifneq (,$(filter userdebug eng, $(TARGET_BUILD_VARIANT)))
+-        LOCAL_KERNEL := device/google/redbull-kernel/Image.lz4
+-    else
+-        LOCAL_KERNEL := device/google/redbull-kernel/vintf/Image.lz4
+-    endif
++    LOCAL_KERNEL := device/google/redbull-kernel/Image.lz4
+ else
+     LOCAL_KERNEL := $(TARGET_PREBUILT_KERNEL)
+ endif

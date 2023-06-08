@@ -1,0 +1,2076 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: js6pak <me@6pak.dev>
+Date: Thu, 22 Jun 2023 17:22:34 +0200
+Subject: [PATCH] Re-add full power menu
+
+Feature: full-power-menu
+
+diff --git a/core/java/android/provider/Settings.java b/core/java/android/provider/Settings.java
+index a6f6da11cdddd7654be6a9218cfa3f888c3b1ba3..24a55c5c5f426c7197beb0fa47f4f346357455dc 100644
+--- a/core/java/android/provider/Settings.java
++++ b/core/java/android/provider/Settings.java
+@@ -10308,14 +10308,21 @@ public final class Settings {
+          * 0 indicates disabled and 1 indicates enabled. A non existent value should be treated as
+          * enabled.
+          *
+-         * @deprecated Controls are migrated to Quick Settings, rendering this unnecessary and will
+-         *             be removed in a future release.
+          * @hide
+          */
+         @Readable
+-        @Deprecated
+         public static final String CONTROLS_ENABLED = "controls_enabled";
+ 
++        /**
++         * Power menu type.
++         *  0 = lite (A12+)
++         *  1 = full (A11)
++         * @hide
++         */
++        @Readable
++        public static final String POWER_MENU_TYPE =
++                "power_menu_type";
++
+         /**
+          * Whether power menu content (cards, passes, controls) will be shown when device is locked.
+          *
+diff --git a/packages/SystemUI/res/drawable/control_no_favorites_background.xml b/packages/SystemUI/res/drawable/control_no_favorites_background.xml
+index 2165b12e56976103e205dd49e54db08201036559..d895dd0c85c7dd9cffb08058dbc29c6ff3184660 100644
+--- a/packages/SystemUI/res/drawable/control_no_favorites_background.xml
++++ b/packages/SystemUI/res/drawable/control_no_favorites_background.xml
+@@ -26,4 +26,12 @@
+             <corners android:radius="@dimen/control_corner_radius" />
+         </shape>
+     </item>
++    <item>
++        <shape>
++            <stroke
++                android:width="1dp"
++                android:color="#4DFFFFFF" />
++            <corners android:radius="@dimen/control_corner_radius"/>
++        </shape>
++    </item>
+ </ripple>
+diff --git a/packages/SystemUI/res/layout/controls_icon.xml b/packages/SystemUI/res/layout/controls_icon.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..12bc5f6837fc911ec5e673ccf71ba31388ef7036
+--- /dev/null
++++ b/packages/SystemUI/res/layout/controls_icon.xml
+@@ -0,0 +1,26 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++**
++** Copyright 2020, The Android Open Source Project
++**
++** Licensed under the Apache License, Version 2.0 (the "License");
++** you may not use this file except in compliance with the License.
++** You may obtain a copy of the License at
++**
++**     http://www.apache.org/licenses/LICENSE-2.0
++**
++** Unless required by applicable law or agreed to in writing, software
++** distributed under the License is distributed on an "AS IS" BASIS,
++** WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++** See the License for the specific language governing permissions and
++** limitations under the License.
++*/
++-->
++
++<ImageView
++    xmlns:android="http://schemas.android.com/apk/res/android"
++    android:layout_width="24dp"
++    android:layout_height="24dp"
++    android:scaleType="fitCenter"
++    android:layout_marginLeft="5dp"
++    android:layout_marginRight="5dp" />
+diff --git a/packages/SystemUI/res/layout/global_actions_grid_item.xml b/packages/SystemUI/res/layout/global_actions_grid_item.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..31c7cbf6ff1b2ac9058e2eb240f4e288962ce2f2
+--- /dev/null
++++ b/packages/SystemUI/res/layout/global_actions_grid_item.xml
+@@ -0,0 +1,60 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Copyright (C) 2008 The Android Open Source Project
++
++     Licensed under the Apache License, Version 2.0 (the "License");
++     you may not use this file except in compliance with the License.
++     You may obtain a copy of the License at
++
++          http://www.apache.org/licenses/LICENSE-2.0
++
++     Unless required by applicable law or agreed to in writing, software
++     distributed under the License is distributed on an "AS IS" BASIS,
++     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++     See the License for the specific language governing permissions and
++     limitations under the License.
++-->
++
++<!-- RelativeLayouts have an issue enforcing minimum heights, so just
++     work around this for now with LinearLayouts. -->
++<LinearLayout
++    xmlns:android="http://schemas.android.com/apk/res/android"
++    android:layout_width="wrap_content"
++    android:layout_height="wrap_content"
++    android:gravity="center"
++    android:layout_marginTop="@dimen/global_actions_grid_item_vertical_margin"
++    android:layout_marginBottom="@dimen/global_actions_grid_item_vertical_margin"
++    android:layout_marginLeft="@dimen/global_actions_grid_item_side_margin"
++    android:layout_marginRight="@dimen/global_actions_grid_item_side_margin"
++>
++    <LinearLayout
++        android:layout_width="@dimen/global_actions_grid_item_width"
++        android:layout_height="@dimen/global_actions_grid_item_height"
++        android:gravity="top|center_horizontal"
++        android:orientation="vertical"
++    >
++        <ImageView
++            android:id="@*android:id/icon"
++            android:layout_width="@dimen/global_actions_grid_item_icon_width"
++            android:layout_height="@dimen/global_actions_grid_item_icon_height"
++            android:layout_marginTop="@dimen/global_actions_grid_item_icon_top_margin"
++            android:layout_marginBottom="@dimen/global_actions_grid_item_icon_bottom_margin"
++            android:layout_marginLeft="@dimen/global_actions_grid_item_icon_side_margin"
++            android:layout_marginRight="@dimen/global_actions_grid_item_icon_side_margin"
++            android:scaleType="centerInside"
++            android:tint="@color/global_actions_text"
++        />
++
++        <TextView
++            android:id="@*android:id/message"
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:ellipsize="marquee"
++            android:marqueeRepeatLimit="marquee_forever"
++            android:singleLine="true"
++            android:gravity="center"
++            android:textSize="12dp"
++            android:textColor="@color/global_actions_text"
++            android:textAppearance="?android:attr/textAppearanceSmall"
++        />
++    </LinearLayout>
++</LinearLayout>
+diff --git a/packages/SystemUI/res/layout/global_actions_grid_v2.xml b/packages/SystemUI/res/layout/global_actions_grid_v2.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..b901aa03b1c630aea75a8841dc3602364c92ee8a
+--- /dev/null
++++ b/packages/SystemUI/res/layout/global_actions_grid_v2.xml
+@@ -0,0 +1,41 @@
++<?xml version="1.0" encoding="utf-8"?>
++<LinearLayout
++    xmlns:android="http://schemas.android.com/apk/res/android"
++    android:id="@+id/global_actions_container"
++    android:layout_width="match_parent"
++    android:layout_height="match_parent"
++    android:orientation="vertical"
++    android:paddingTop="62dp">  <!-- TODO figure out why this is needed to replicate A11 -->
++
++  <include layout="@layout/global_actions_view" />
++
++  <include layout="@layout/global_actions_lock_view" />
++
++  <com.android.systemui.globalactions.MinHeightScrollView
++      android:layout_width="match_parent"
++      android:layout_height="match_parent"
++      android:orientation="vertical"
++      android:scrollbars="none">
++
++    <LinearLayout
++        android:id="@+id/global_actions_grid_root"
++        android:layout_width="match_parent"
++        android:layout_height="wrap_content"
++        android:clipChildren="false"
++        android:orientation="vertical"
++        android:clipToPadding="false">
++
++      <FrameLayout
++          android:id="@+id/global_actions_wallet"
++          android:layout_width="match_parent"
++          android:layout_height="wrap_content"/>
++
++      <LinearLayout
++          android:id="@+id/global_actions_controls"
++          android:layout_width="match_parent"
++          android:layout_height="wrap_content"
++          android:orientation="vertical"/>
++
++    </LinearLayout>
++  </com.android.systemui.globalactions.MinHeightScrollView>
++</LinearLayout>
+diff --git a/packages/SystemUI/res/layout/global_actions_item.xml b/packages/SystemUI/res/layout/global_actions_item.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..66a4b737d09bcb39fb52dd03d8c82a568cf65a32
+--- /dev/null
++++ b/packages/SystemUI/res/layout/global_actions_item.xml
+@@ -0,0 +1,60 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Copyright (C) 2008 The Android Open Source Project
++
++     Licensed under the Apache License, Version 2.0 (the "License");
++     you may not use this file except in compliance with the License.
++     You may obtain a copy of the License at
++
++          http://www.apache.org/licenses/LICENSE-2.0
++
++     Unless required by applicable law or agreed to in writing, software
++     distributed under the License is distributed on an "AS IS" BASIS,
++     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++     See the License for the specific language governing permissions and
++     limitations under the License.
++-->
++
++<!-- RelativeLayouts have an issue enforcing minimum heights, so just
++     work around this for now with LinearLayouts. -->
++<LinearLayout
++    xmlns:android="http://schemas.android.com/apk/res/android"
++    android:layout_width="wrap_content"
++    android:layout_height="wrap_content"
++    android:layout_gravity="center"
++    android:minWidth="92dp"
++    android:minHeight="92dp"
++    android:gravity="center"
++    android:orientation="vertical"
++    android:paddingEnd="4dip"
++    android:paddingStart="4dip">
++
++    <ImageView
++        android:id="@*android:id/icon"
++        android:layout_width="24dp"
++        android:layout_height="24dp"
++        android:layout_gravity="center"
++        android:scaleType="center"
++        android:alpha="?android:attr/primaryContentAlpha"
++    />
++
++    <TextView
++        android:id="@*android:id/message"
++        android:layout_width="wrap_content"
++        android:layout_height="wrap_content"
++        android:layout_gravity="top|center_horizontal"
++        android:paddingTop="10dp"
++        android:gravity="center"
++        android:textSize="12sp"
++        android:textAppearance="?android:attr/textAppearanceSmall"
++        />
++
++    <TextView
++        android:id="@*android:id/status"
++        android:layout_width="wrap_content"
++        android:layout_height="wrap_content"
++        android:layout_gravity="top|center_horizontal"
++        android:gravity="center"
++        android:textColor="?android:attr/textColorTertiary"
++        android:textAppearance="?android:attr/textAppearanceSmall"
++        />
++</LinearLayout>
+diff --git a/packages/SystemUI/res/layout/global_actions_lock_view.xml b/packages/SystemUI/res/layout/global_actions_lock_view.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..b6dcbc90565f2bef8f9827e69260bc899bbc66e9
+--- /dev/null
++++ b/packages/SystemUI/res/layout/global_actions_lock_view.xml
+@@ -0,0 +1,35 @@
++<!--
++  ~ Copyright (C) 2023 The Android Open Source Project
++  ~
++  ~ Licensed under the Apache License, Version 2.0 (the "License");
++  ~ you may not use this file except in compliance with the License.
++  ~ You may obtain a copy of the License at
++  ~
++  ~      http://www.apache.org/licenses/LICENSE-2.0
++  ~
++  ~ Unless required by applicable law or agreed to in writing, software
++  ~ distributed under the License is distributed on an "AS IS" BASIS,
++  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++  ~ See the License for the specific language governing permissions and
++  ~ limitations under the License.
++  -->
++<androidx.constraintlayout.widget.ConstraintLayout
++    xmlns:android="http://schemas.android.com/apk/res/android"
++    xmlns:app="http://schemas.android.com/apk/res-auto"
++    android:id="@+id/global_actions_lock_message_container"
++    android:layout_width="match_parent"
++    android:layout_height="match_parent"
++    android:visibility="gone">
++  <TextView
++      android:id="@+id/global_actions_lock_message"
++      style="@style/TextAppearance.Control.Title"
++      android:layout_width="match_parent"
++      android:layout_height="wrap_content"
++      android:layout_marginHorizontal="@dimen/global_actions_side_margin"
++      android:drawablePadding="12dp"
++      android:gravity="center"
++      android:text="@string/global_action_lock_message"
++      app:layout_constraintBottom_toBottomOf="parent"
++      app:layout_constraintTop_toTopOf="parent"
++      app:layout_constraintVertical_bias="0.35"/>
++</androidx.constraintlayout.widget.ConstraintLayout>
+\ No newline at end of file
+diff --git a/packages/SystemUI/res/values/colors.xml b/packages/SystemUI/res/values/colors.xml
+index 9d00a27442ca0502e1e1d7dbe91ef728e6db0b7d..e66b8a90db1f65f9f6058fe23c3059f991aa0ee0 100644
+--- a/packages/SystemUI/res/values/colors.xml
++++ b/packages/SystemUI/res/values/colors.xml
+@@ -32,6 +32,16 @@
+     <!-- The color of the background in the grid of the Global Actions menu -->
+     <color name="global_actions_grid_background">#F1F3F4</color>
+ 
++    <!-- The color of the text in the Global Actions menu -->
++    <color name="global_actions_text">#5F6368</color>
++
++    <!-- The color of the text in the Global Actions menu -->
++    <color name="global_actions_alert_text">#C5221F</color>
++
++    <!-- The color of the background of the emergency button when home controls are visible -->
++    <color name="global_actions_emergency_background">#EE675C</color>
++    <color name="global_actions_emergency_text">#F1F3F4</color>
++
+     <!-- Colors for Power Menu Lite -->
+     <color name="global_actions_lite_background">#191C18</color>
+     <color name="global_actions_lite_button_background">#303030</color>
+diff --git a/packages/SystemUI/res/values/config.xml b/packages/SystemUI/res/values/config.xml
+index d1993370063a7db0d8c9c01e0bed35bb16c24f20..e8f4b786ac7cd706da7337438d49738a1fd08fff 100644
+--- a/packages/SystemUI/res/values/config.xml
++++ b/packages/SystemUI/res/values/config.xml
+@@ -525,6 +525,8 @@
+     <!-- Max number of columns for quick controls area -->
+     <integer name="controls_max_columns">2</integer>
+ 
++    <!-- Max number of columns for power menu -->
++    <integer name="power_menu_max_columns">3</integer>
+     <!-- Max number of columns for power menu lite -->
+     <integer name="power_menu_lite_max_columns">2</integer>
+     <!-- Max number of rows for power menu lite -->
+diff --git a/packages/SystemUI/res/values/dimens.xml b/packages/SystemUI/res/values/dimens.xml
+index adc4c555dfacf1992fdf9fc6d8734b709fcec9ae..508a3bd7515a421b7befb31e4d499cbdb28d4374 100644
+--- a/packages/SystemUI/res/values/dimens.xml
++++ b/packages/SystemUI/res/values/dimens.xml
+@@ -893,6 +893,8 @@
+     <dimen name="default_gear_space">18dp</dimen>
+ 
+     <!-- Global actions power menu -->
++    <dimen name="global_actions_panel_width">120dp</dimen>
++    <dimen name="global_actions_padding">12dp</dimen>
+     <dimen name="global_actions_translate">9dp</dimen>
+ 
+     <!-- Distance from the top of screen in pixels, to position the power menu near the button. -->
+@@ -913,14 +915,25 @@
+ 
+     <dimen name="global_actions_grid_item_layout_height">98dp</dimen>
+     <dimen name="global_actions_grid_item_side_margin">5dp</dimen>
++    <dimen name="global_actions_grid_item_vertical_margin">4dp</dimen>
++    <dimen name="global_actions_grid_item_width">64dp</dimen>
+     <dimen name="global_actions_grid_item_height">64dp</dimen>
+ 
++    <dimen name="global_actions_grid_item_icon_width">20dp</dimen>
++    <dimen name="global_actions_grid_item_icon_height">20dp</dimen>
++    <dimen name="global_actions_grid_item_icon_top_margin">12dp</dimen>
++    <dimen name="global_actions_grid_item_icon_side_margin">22dp</dimen>
++    <dimen name="global_actions_grid_item_icon_bottom_margin">4dp</dimen>
++
+     <!-- Margins at the left and right of the power menu and home controls widgets. -->
+     <dimen name="global_actions_side_margin">10dp</dimen>
+ 
+     <!-- Amount to shift the layout when exiting/entering for controls activities -->
+     <dimen name="global_actions_controls_y_translation">20dp</dimen>
+ 
++    <!-- Shift quick access wallet down in Global Actions when Controls are unavailable -->
++    <dimen name="global_actions_wallet_top_margin">40dp</dimen>
++
+     <!-- Shutdown and restart actions are larger in power options dialog -->
+     <dimen name="global_actions_power_dialog_item_height">190dp</dimen>
+     <dimen name="global_actions_power_dialog_item_width">255dp</dimen>
+diff --git a/packages/SystemUI/res/values/strings.xml b/packages/SystemUI/res/values/strings.xml
+index b7036529a73370dc234d2e75732994f6bf9d44f0..6cc21d42713493c7b6236425a27f74332185fc77 100644
+--- a/packages/SystemUI/res/values/strings.xml
++++ b/packages/SystemUI/res/values/strings.xml
+@@ -2244,6 +2244,13 @@
+     <!-- Device Controls strings -->
+     <!-- Device Controls, Quick Settings tile title [CHAR LIMIT=30] -->
+     <string name="quick_controls_title">Device controls</string>
++    <!-- Device Controls empty state, subtitle [CHAR LIMIT=100] -->
++    <string name="quick_controls_subtitle">Add controls for your connected devices</string>
++
++    <!-- Device Controls setup, title [CHAR LIMIT=50] -->
++    <string name="quick_controls_setup_title">Set up device controls</string>
++    <!-- Device Controls setup, subtitle [CHAR LIMIT=100] -->
++    <string name="quick_controls_setup_subtitle">Hold the Power button to access your controls</string>
+ 
+     <!-- Controls management providers screen title [CHAR LIMIT=60]-->
+     <string name="controls_providers_title">Choose app to add controls</string>
+diff --git a/packages/SystemUI/res/values/styles.xml b/packages/SystemUI/res/values/styles.xml
+index 27b15c926bbb5e5d95594bfd4341c107ebeb8a46..1d0b70d587bf9e87eed8eaa7d5e2338c12924614 100644
+--- a/packages/SystemUI/res/values/styles.xml
++++ b/packages/SystemUI/res/values/styles.xml
+@@ -421,6 +421,7 @@
+     <style name="Theme.SystemUI.Dialog.GlobalActions" parent="@android:style/Theme.DeviceDefault.Light.NoActionBar.Fullscreen">
+         <item name="android:colorError">@*android:color/error_color_material_dark</item>
+         <item name="android:windowIsFloating">true</item>
++        <item name="android:windowAnimationStyle">@null</item>
+     </style>
+ 
+     <style name="Theme.SystemUI.Dialog.GlobalActionsLite" parent="Theme.SystemUI.Dialog">
+diff --git a/packages/SystemUI/src/com/android/systemui/controls/controller/ControlsController.kt b/packages/SystemUI/src/com/android/systemui/controls/controller/ControlsController.kt
+index 2d37c292a6b8ea8e82b011591ce2dd87e4668a06..d77a515d45a38cf07b0605f8645fc7758635ceb2 100644
+--- a/packages/SystemUI/src/com/android/systemui/controls/controller/ControlsController.kt
++++ b/packages/SystemUI/src/com/android/systemui/controls/controller/ControlsController.kt
+@@ -41,6 +41,11 @@ import java.util.function.Consumer
+  */
+ interface ControlsController : UserAwareController {
+ 
++    /**
++     * Whether the controls system is available for the current user.
++     */
++    val available: Boolean
++
+     // SERVICE COMMUNICATION
+ 
+     /**
+diff --git a/packages/SystemUI/src/com/android/systemui/controls/controller/ControlsControllerImpl.kt b/packages/SystemUI/src/com/android/systemui/controls/controller/ControlsControllerImpl.kt
+index e8c97bf77271639a0f07c975a8f78abe959e37e9..e4efa38c6ba9692f2497c0c2203a70dfacbcd05a 100644
+--- a/packages/SystemUI/src/com/android/systemui/controls/controller/ControlsControllerImpl.kt
++++ b/packages/SystemUI/src/com/android/systemui/controls/controller/ControlsControllerImpl.kt
+@@ -20,12 +20,14 @@ import android.app.PendingIntent
+ import android.app.backup.BackupManager
+ import android.content.BroadcastReceiver
+ import android.content.ComponentName
++import android.content.ContentResolver
+ import android.content.Context
+ import android.content.Intent
+ import android.content.IntentFilter
+ import android.database.ContentObserver
+ import android.net.Uri
+ import android.os.UserHandle
++import android.provider.Settings
+ import android.service.controls.Control
+ import android.service.controls.actions.ControlAction
+ import android.util.ArrayMap
+@@ -71,10 +73,15 @@ class ControlsControllerImpl @Inject constructor (
+ 
+     companion object {
+         private const val TAG = "ControlsControllerImpl"
++        internal const val CONTROLS_AVAILABLE = Settings.Secure.CONTROLS_ENABLED
++        internal val URI = Settings.Secure.getUriFor(CONTROLS_AVAILABLE)
+         private const val USER_CHANGE_RETRY_DELAY = 500L // ms
+         private const val DEFAULT_ENABLED = 1
+         private const val PERMISSION_SELF = "com.android.systemui.permission.SELF"
+         const val SUGGESTED_CONTROLS_PER_STRUCTURE = 6
++
++        private fun isAvailable(userId: Int, cr: ContentResolver) = Settings.Secure.getIntForUser(
++            cr, CONTROLS_AVAILABLE, DEFAULT_ENABLED, userId) != 0
+     }
+ 
+     private var userChanging: Boolean = true
+@@ -87,6 +94,11 @@ class ControlsControllerImpl @Inject constructor (
+     override val currentUserId
+         get() = currentUser.identifier
+ 
++    private val contentResolver: ContentResolver
++        get() = context.contentResolver
++    override var available = isAvailable(currentUserId, contentResolver)
++        private set
++
+     private val persistenceWrapper: ControlsFavoritePersistenceWrapper
+     @VisibleForTesting
+     internal var auxiliaryPersistenceWrapper: AuxiliaryPersistenceWrapper
+@@ -117,7 +129,8 @@ class ControlsControllerImpl @Inject constructor (
+                 BackupManager(userStructure.userContext)
+         )
+         auxiliaryPersistenceWrapper.changeFile(userStructure.auxiliaryFile)
+-        resetFavorites()
++        available = isAvailable(newUser.identifier, contentResolver)
++        resetFavorites(available)
+         bindingController.changeUser(newUser)
+         listingController.changeUser(newUser)
+         userChanging = false
+@@ -141,7 +154,7 @@ class ControlsControllerImpl @Inject constructor (
+                     Log.d(TAG, "Restore finished, storing auxiliary favorites")
+                     auxiliaryPersistenceWrapper.initialize()
+                     persistenceWrapper.storeFavorites(auxiliaryPersistenceWrapper.favorites)
+-                    resetFavorites()
++                    resetFavorites(available)
+                 }
+             }
+         }
+@@ -160,7 +173,8 @@ class ControlsControllerImpl @Inject constructor (
+             if (userChanging || userId != currentUserId) {
+                 return
+             }
+-            resetFavorites()
++            available = isAvailable(currentUserId, contentResolver)
++            resetFavorites(available)
+         }
+     }
+ 
+@@ -228,7 +242,7 @@ class ControlsControllerImpl @Inject constructor (
+ 
+     init {
+         dumpManager.registerDumpable(javaClass.name, this)
+-        resetFavorites()
++        resetFavorites(available)
+         userChanging = false
+         context.registerReceiver(
+             restoreFinishedReceiver,
+@@ -237,22 +251,27 @@ class ControlsControllerImpl @Inject constructor (
+             null,
+             Context.RECEIVER_NOT_EXPORTED
+         )
++        contentResolver.registerContentObserver(URI, false, settingObserver, UserHandle.USER_ALL)
+         listingController.addCallback(listingCallback)
+     }
+ 
+     fun destroy() {
+         context.unregisterReceiver(restoreFinishedReceiver)
++        contentResolver.unregisterContentObserver(settingObserver)
+         listingController.removeCallback(listingCallback)
+     }
+ 
+-    private fun resetFavorites() {
++    private fun resetFavorites(shouldLoad: Boolean) {
+         Favorites.clear()
+-        Favorites.load(persistenceWrapper.readFavorites())
+-        // After loading favorites, add the package names of any apps with favorites to the list
+-        // of authorized panels. That way, if the user has previously favorited controls for an app,
+-        // that panel will be authorized.
+-        authorizedPanelsRepository.addAuthorizedPanels(
++
++        if (shouldLoad) {
++            Favorites.load(persistenceWrapper.readFavorites())
++            // After loading favorites, add the package names of any apps with favorites to the list
++            // of authorized panels. That way, if the user has previously favorited controls for an app,
++            // that panel will be authorized.
++            authorizedPanelsRepository.addAuthorizedPanels(
+                 Favorites.getAllStructures().map { it.componentName.packageName }.toSet())
++        }
+     }
+ 
+     private fun confirmAvailability(): Boolean {
+@@ -260,6 +279,10 @@ class ControlsControllerImpl @Inject constructor (
+             Log.w(TAG, "Controls not available while user is changing")
+             return false
+         }
++        if (!available) {
++            Log.d(TAG, "Controls not available")
++            return false
++        }
+         return true
+     }
+ 
+diff --git a/packages/SystemUI/src/com/android/systemui/controls/dagger/ControlsComponent.kt b/packages/SystemUI/src/com/android/systemui/controls/dagger/ControlsComponent.kt
+index 7509a8ad0c88104dc0f2f16b046718e9b7b2d69e..c129c243b2025308a7871c496be95986c1970325 100644
+--- a/packages/SystemUI/src/com/android/systemui/controls/dagger/ControlsComponent.kt
++++ b/packages/SystemUI/src/com/android/systemui/controls/dagger/ControlsComponent.kt
+@@ -80,7 +80,7 @@ class ControlsComponent @Inject constructor(
+     /**
+      * @return true if controls are feature-enabled and the user has the setting enabled
+      */
+-    fun isEnabled() = featureEnabled
++    fun isEnabled() = featureEnabled && lazyControlsController.get().available
+ 
+     /**
+      * Returns one of 3 states:
+diff --git a/packages/SystemUI/src/com/android/systemui/controls/management/ControlsEditingActivity.kt b/packages/SystemUI/src/com/android/systemui/controls/management/ControlsEditingActivity.kt
+index 7df08651d5ab6b1b5e3320756812bf353255b83c..e638c8cca03dc9f9a6671b0430d13cf8f45f921b 100644
+--- a/packages/SystemUI/src/com/android/systemui/controls/management/ControlsEditingActivity.kt
++++ b/packages/SystemUI/src/com/android/systemui/controls/management/ControlsEditingActivity.kt
+@@ -40,6 +40,7 @@ import com.android.systemui.controls.controller.StructureInfo
+ import com.android.systemui.controls.ui.ControlsActivity
+ import com.android.systemui.controls.ui.ControlsUiController
+ import com.android.systemui.dagger.qualifiers.Main
++import com.android.systemui.globalactions.GlobalActionsComponent
+ import com.android.systemui.settings.UserTracker
+ import java.util.concurrent.Executor
+ import javax.inject.Inject
+@@ -51,6 +52,7 @@ open class ControlsEditingActivity @Inject constructor(
+     @Main private val mainExecutor: Executor,
+     private val controller: ControlsControllerImpl,
+     private val userTracker: UserTracker,
++    private val globalActionsComponent: GlobalActionsComponent,
+     private val customIconCache: CustomIconCache,
+     private val uiController: ControlsUiController
+ ) : ComponentActivity() {
+@@ -68,6 +70,7 @@ open class ControlsEditingActivity @Inject constructor(
+     private lateinit var model: FavoritesModel
+     private lateinit var subtitle: TextView
+     private lateinit var saveButton: View
++    private var backToGlobalActions = true
+ 
+     private val userTrackerCallback: UserTracker.Callback = object : UserTracker.Callback {
+         private val startingUser = controller.currentUserId
+@@ -98,6 +101,11 @@ open class ControlsEditingActivity @Inject constructor(
+             structure = it
+         } ?: run(this::finish)
+ 
++        backToGlobalActions = intent.getBooleanExtra(
++            ControlsUiController.BACK_TO_GLOBAL_ACTIONS,
++            true
++        )
++
+         bindViews()
+ 
+         bindButtons()
+@@ -127,6 +135,9 @@ open class ControlsEditingActivity @Inject constructor(
+     }
+ 
+     override fun onBackPressed() {
++        if (backToGlobalActions) {
++            globalActionsComponent.handleShowGlobalActionsMenu()
++        }
+         animateExitAndFinish()
+     }
+ 
+@@ -170,11 +181,15 @@ open class ControlsEditingActivity @Inject constructor(
+             setText(R.string.save)
+             setOnClickListener {
+                 saveFavorites()
+-                startActivity(
+-                    Intent(applicationContext, ControlsActivity::class.java),
+-                    ActivityOptions
+-                        .makeSceneTransitionAnimation(this@ControlsEditingActivity).toBundle()
+-                )
++                if (backToGlobalActions) {
++                    globalActionsComponent.handleShowGlobalActionsMenu()
++                } else {
++                    startActivity(
++                        Intent(applicationContext, ControlsActivity::class.java),
++                        ActivityOptions
++                            .makeSceneTransitionAnimation(this@ControlsEditingActivity).toBundle()
++                    )
++                }
+                 animateExitAndFinish()
+             }
+         }
+diff --git a/packages/SystemUI/src/com/android/systemui/controls/management/ControlsFavoritingActivity.kt b/packages/SystemUI/src/com/android/systemui/controls/management/ControlsFavoritingActivity.kt
+index 3e97d3132bc7858fab03ee51bada8af8d47b23cd..d56d5846c64ba42b2e476afe31b758aad0d9ae71 100644
+--- a/packages/SystemUI/src/com/android/systemui/controls/management/ControlsFavoritingActivity.kt
++++ b/packages/SystemUI/src/com/android/systemui/controls/management/ControlsFavoritingActivity.kt
+@@ -47,6 +47,7 @@ import com.android.systemui.controls.controller.StructureInfo
+ import com.android.systemui.controls.ui.ControlsActivity
+ import com.android.systemui.controls.ui.ControlsUiController
+ import com.android.systemui.dagger.qualifiers.Main
++import com.android.systemui.globalactions.GlobalActionsComponent
+ import com.android.systemui.settings.UserTracker
+ import java.text.Collator
+ import java.util.concurrent.Executor
+@@ -58,6 +59,7 @@ open class ControlsFavoritingActivity @Inject constructor(
+     private val controller: ControlsControllerImpl,
+     private val listingController: ControlsListingController,
+     private val userTracker: UserTracker,
++    private val globalActionsComponent: GlobalActionsComponent,
+     private val uiController: ControlsUiController
+ ) : ComponentActivity() {
+ 
+@@ -94,6 +96,7 @@ open class ControlsFavoritingActivity @Inject constructor(
+     private lateinit var comparator: Comparator<StructureContainer>
+     private var cancelLoadRunnable: Runnable? = null
+     private var isPagerLoaded = false
++    private var backToGlobalActions = true
+ 
+     private val userTrackerCallback: UserTracker.Callback = object : UserTracker.Callback {
+         private val startingUser = controller.currentUserId
+@@ -141,6 +144,11 @@ open class ControlsFavoritingActivity @Inject constructor(
+         component = intent.getParcelableExtra<ComponentName>(Intent.EXTRA_COMPONENT_NAME)
+         fromProviderSelector = intent.getBooleanExtra(EXTRA_FROM_PROVIDER_SELECTOR, false)
+ 
++        backToGlobalActions = intent.getBooleanExtra(
++            ControlsUiController.BACK_TO_GLOBAL_ACTIONS,
++            true
++        )
++
+         bindViews()
+     }
+ 
+@@ -322,11 +330,14 @@ open class ControlsFavoritingActivity @Inject constructor(
+                             Toast.LENGTH_SHORT
+                             ).show()
+                 }
+-                startActivity(
+-                    Intent(context, ControlsProviderSelectorActivity::class.java),
+-                    ActivityOptions
+-                        .makeSceneTransitionAnimation(this@ControlsFavoritingActivity).toBundle()
+-                )
++                startActivity(Intent().apply {
++                    component = ComponentName(context, ControlsProviderSelectorActivity::class.java)
++                    putExtra(
++                        ControlsUiController.BACK_TO_GLOBAL_ACTIONS,
++                        backToGlobalActions
++                    )
++                }, ActivityOptions
++                    .makeSceneTransitionAnimation(this@ControlsFavoritingActivity).toBundle())
+                 animateExitAndFinish()
+             }
+         }
+@@ -348,10 +359,14 @@ open class ControlsFavoritingActivity @Inject constructor(
+     }
+ 
+     private fun openControlsOrigin() {
+-        startActivity(
+-            Intent(applicationContext, ControlsActivity::class.java),
+-            ActivityOptions.makeSceneTransitionAnimation(this).toBundle()
+-        )
++        if (backToGlobalActions) {
++            globalActionsComponent.handleShowGlobalActionsMenu()
++        } else {
++            startActivity(
++                Intent(applicationContext, ControlsActivity::class.java),
++                ActivityOptions.makeSceneTransitionAnimation(this).toBundle()
++            )
++        }
+     }
+ 
+     override fun onPause() {
+diff --git a/packages/SystemUI/src/com/android/systemui/controls/management/ControlsProviderSelectorActivity.kt b/packages/SystemUI/src/com/android/systemui/controls/management/ControlsProviderSelectorActivity.kt
+index 3808e73ca085aa428ffd981abc49c1243c6ddfa0..c9a832c31e87b90e30ece2763356461abeb1762d 100644
+--- a/packages/SystemUI/src/com/android/systemui/controls/management/ControlsProviderSelectorActivity.kt
++++ b/packages/SystemUI/src/com/android/systemui/controls/management/ControlsProviderSelectorActivity.kt
+@@ -40,9 +40,11 @@ import com.android.systemui.controls.ControlsServiceInfo
+ import com.android.systemui.controls.controller.ControlsController
+ import com.android.systemui.controls.panels.AuthorizedPanelsRepository
+ import com.android.systemui.controls.ui.ControlsActivity
++import com.android.systemui.controls.ui.ControlsUiController
+ import com.android.systemui.controls.ui.SelectedItem
+ import com.android.systemui.dagger.qualifiers.Background
+ import com.android.systemui.dagger.qualifiers.Main
++import com.android.systemui.globalactions.GlobalActionsComponent
+ import com.android.systemui.settings.UserTracker
+ import java.util.concurrent.Executor
+ import javax.inject.Inject
+@@ -55,6 +57,7 @@ open class ControlsProviderSelectorActivity @Inject constructor(
+     @Background private val backExecutor: Executor,
+     private val listingController: ControlsListingController,
+     private val controlsController: ControlsController,
++    private val globalActionsComponent: GlobalActionsComponent,
+     private val userTracker: UserTracker,
+     private val authorizedPanelsRepository: AuthorizedPanelsRepository,
+     private val panelConfirmationDialogFactory: PanelConfirmationDialogFactory
+@@ -66,6 +69,7 @@ open class ControlsProviderSelectorActivity @Inject constructor(
+         const val BACK_SHOULD_EXIT = "back_should_exit"
+     }
+     private var backShouldExit = false
++    private var backToGlobalActions = true
+     private lateinit var recyclerView: RecyclerView
+     private val userTrackerCallback: UserTracker.Callback = object : UserTracker.Callback {
+         private val startingUser = listingController.currentUserId
+@@ -121,14 +125,23 @@ open class ControlsProviderSelectorActivity @Inject constructor(
+         requireViewById<View>(R.id.done).visibility = View.GONE
+ 
+         backShouldExit = intent.getBooleanExtra(BACK_SHOULD_EXIT, false)
++
++        backToGlobalActions = intent.getBooleanExtra(
++            ControlsUiController.BACK_TO_GLOBAL_ACTIONS,
++            true
++        )
+     }
+ 
+     override fun onBackPressed() {
+-        if (!backShouldExit) {
+-            val i = Intent().apply {
+-                component = ComponentName(applicationContext, ControlsActivity::class.java)
++        if (backToGlobalActions) {
++            globalActionsComponent.handleShowGlobalActionsMenu()
++        } else {
++            if (!backShouldExit) {
++                val i = Intent().apply {
++                    component = ComponentName(applicationContext, ControlsActivity::class.java)
++                }
++                startActivity(i, ActivityOptions.makeSceneTransitionAnimation(this).toBundle())
+             }
+-            startActivity(i, ActivityOptions.makeSceneTransitionAnimation(this).toBundle())
+         }
+         animateExitAndFinish()
+     }
+@@ -212,6 +225,10 @@ open class ControlsProviderSelectorActivity @Inject constructor(
+                             listingController.getAppLabel(it))
+                     putExtra(Intent.EXTRA_COMPONENT_NAME, it)
+                     putExtra(ControlsFavoritingActivity.EXTRA_FROM_PROVIDER_SELECTOR, true)
++                    putExtra(
++                        ControlsUiController.BACK_TO_GLOBAL_ACTIONS,
++                        backToGlobalActions
++                    )
+                 }
+                 startActivity(intent, ActivityOptions.makeSceneTransitionAnimation(this).toBundle())
+                 animateExitAndFinish()
+diff --git a/packages/SystemUI/src/com/android/systemui/controls/management/ControlsRequestDialog.kt b/packages/SystemUI/src/com/android/systemui/controls/management/ControlsRequestDialog.kt
+index 86bde5c3cf4d87e8649818118fd26256a3217e09..6406257d2bb2563c383cf33b3198ab2a242cbd7f 100644
+--- a/packages/SystemUI/src/com/android/systemui/controls/management/ControlsRequestDialog.kt
++++ b/packages/SystemUI/src/com/android/systemui/controls/management/ControlsRequestDialog.kt
+@@ -74,7 +74,10 @@ open class ControlsRequestDialog @Inject constructor(
+ 
+     override fun onCreate(savedInstanceState: Bundle?) {
+         super.onCreate(savedInstanceState)
+-
++        if (!controller.available) {
++            Log.w(TAG, "Quick Controls not available for this user ")
++            finish()
++        }
+         userTracker.addCallback(userTrackerCallback, mainExecutor)
+         controlsListingController.addCallback(callback)
+ 
+diff --git a/packages/SystemUI/src/com/android/systemui/controls/ui/ControlActionCoordinator.kt b/packages/SystemUI/src/com/android/systemui/controls/ui/ControlActionCoordinator.kt
+index 8029ba844850d20e13506a8bf85b9defd01e5dab..0db15e83fc930caff8610893fac100c99dd4c242 100644
+--- a/packages/SystemUI/src/com/android/systemui/controls/ui/ControlActionCoordinator.kt
++++ b/packages/SystemUI/src/com/android/systemui/controls/ui/ControlActionCoordinator.kt
+@@ -26,7 +26,7 @@ import android.service.controls.Control
+ interface ControlActionCoordinator {
+ 
+     // If launched from an Activity, continue within this stack
+-    var activityContext: Context
++    var activityContext: Context?
+ 
+     /**
+      * Close any dialogs which may have been open
+diff --git a/packages/SystemUI/src/com/android/systemui/controls/ui/ControlActionCoordinatorImpl.kt b/packages/SystemUI/src/com/android/systemui/controls/ui/ControlActionCoordinatorImpl.kt
+index 99a10a33ab0f361abca1be7ed85bb64197ffdc99..c73242c6bcf8f09b8b02a8f845ff5c2a4b0471db 100644
+--- a/packages/SystemUI/src/com/android/systemui/controls/ui/ControlActionCoordinatorImpl.kt
++++ b/packages/SystemUI/src/com/android/systemui/controls/ui/ControlActionCoordinatorImpl.kt
+@@ -40,6 +40,7 @@ import com.android.systemui.dagger.SysUISingleton
+ import com.android.systemui.dagger.qualifiers.Main
+ import com.android.systemui.flags.FeatureFlags
+ import com.android.systemui.flags.Flags
++import com.android.systemui.globalactions.GlobalActionsComponent
+ import com.android.systemui.plugins.ActivityStarter
+ import com.android.systemui.statusbar.VibratorHelper
+ import com.android.systemui.statusbar.policy.KeyguardStateController
+@@ -56,6 +57,7 @@ class ControlActionCoordinatorImpl @Inject constructor(
+         private val activityStarter: ActivityStarter,
+         private val broadcastSender: BroadcastSender,
+         private val keyguardStateController: KeyguardStateController,
++        private val globalActionsComponent: GlobalActionsComponent,
+         private val taskViewFactory: Optional<TaskViewFactory>,
+         private val controlsMetricsLogger: ControlsMetricsLogger,
+         private val vibrator: VibratorHelper,
+@@ -70,7 +72,7 @@ class ControlActionCoordinatorImpl @Inject constructor(
+         get() = !keyguardStateController.isUnlocked()
+     private val allowTrivialControls: Boolean
+         get() = controlsSettingsRepository.allowActionOnTrivialControlsInLockscreen.value
+-    override lateinit var activityContext: Context
++    override var activityContext: Context? = null
+ 
+     companion object {
+         private const val RESPONSE_TIMEOUT_IN_MILLIS = 3000L
+@@ -202,9 +204,14 @@ class ControlActionCoordinatorImpl @Inject constructor(
+                 // pending actions will only run after the control state has been refreshed
+                 pendingAction = action
+             }
++            val wasLocked = isLocked
+             activityStarter.dismissKeyguardThenExecute({
+                 Log.d(ControlsUiController.TAG, "Device unlocked, invoking controls action")
+-                action.invoke()
++                if (wasLocked && activityContext == null) {
++                    globalActionsComponent.handleShowGlobalActionsMenu()
++                } else {
++                    action.invoke()
++                }
+                 true
+             }, { pendingAction = null }, true /* afterKeyguardGone */)
+         } else {
+@@ -247,8 +254,8 @@ class ControlActionCoordinatorImpl @Inject constructor(
+         if (action.authIsRequired) {
+             return
+         }
+-        if (!featureFlags.isEnabled(Flags.USE_APP_PANELS)) {
+-            controlsSettingsDialogManager.maybeShowDialog(activityContext) {}
++        if (!featureFlags.isEnabled(Flags.USE_APP_PANELS) && activityContext != null) {
++            controlsSettingsDialogManager.maybeShowDialog(activityContext!!) {}
+         }
+     }
+ 
+diff --git a/packages/SystemUI/src/com/android/systemui/controls/ui/ControlsUiController.kt b/packages/SystemUI/src/com/android/systemui/controls/ui/ControlsUiController.kt
+index 0cc4683baef1b769f1b499c29774616928d543f4..d82ded1126dda47db22f75fdc823309c30aafd3e 100644
+--- a/packages/SystemUI/src/com/android/systemui/controls/ui/ControlsUiController.kt
++++ b/packages/SystemUI/src/com/android/systemui/controls/ui/ControlsUiController.kt
+@@ -24,13 +24,16 @@ import android.view.ViewGroup
+ import com.android.systemui.controls.controller.StructureInfo
+ 
+ interface ControlsUiController {
++    val available: Boolean
++
+     companion object {
+         public const val TAG = "ControlsUiController"
+         public const val EXTRA_ANIMATE = "extra_animate"
+         public const val EXIT_TO_DREAM = "extra_exit_to_dream"
++        public const val BACK_TO_GLOBAL_ACTIONS = "back_to_global_actions"
+     }
+ 
+-    fun show(parent: ViewGroup, onDismiss: Runnable, activityContext: Context)
++    fun show(parent: ViewGroup, onDismiss: Runnable, activityContext: Context?)
+ 
+     /**
+      * Hide the controls content if it's attached to this parent.
+diff --git a/packages/SystemUI/src/com/android/systemui/controls/ui/ControlsUiControllerImpl.kt b/packages/SystemUI/src/com/android/systemui/controls/ui/ControlsUiControllerImpl.kt
+index 55439164954865b49e6e3253f4e955040251639d..d3cd5ef2a421a43a4142f164bff1f46da83ee725 100644
+--- a/packages/SystemUI/src/com/android/systemui/controls/ui/ControlsUiControllerImpl.kt
++++ b/packages/SystemUI/src/com/android/systemui/controls/ui/ControlsUiControllerImpl.kt
+@@ -160,7 +160,9 @@ class ControlsUiControllerImpl @Inject constructor (
+             reload(parent)
+     }
+ 
+-    private lateinit var activityContext: Context
++    override val available: Boolean
++        get() = controlsController.get().available
++
+     private lateinit var listingCallback: ControlsListingController.ControlsListingCallback
+ 
+     override val isShowing: Boolean
+@@ -220,13 +222,12 @@ class ControlsUiControllerImpl @Inject constructor (
+     override fun show(
+         parent: ViewGroup,
+         onDismiss: Runnable,
+-        activityContext: Context
++        activityContext: Context?
+     ) {
+         Log.d(ControlsUiController.TAG, "show()")
+         Trace.instant(Trace.TRACE_TAG_APP, "ControlsUiControllerImpl#show")
+         this.parent = parent
+         this.onDismiss = onDismiss
+-        this.activityContext = activityContext
+         this.openAppIntent = null
+         this.overflowMenuAdapter = null
+         hidden = false
+@@ -290,7 +291,7 @@ class ControlsUiControllerImpl @Inject constructor (
+                 controlViewsById.clear()
+                 controlsById.clear()
+ 
+-                show(parent, onDismiss, activityContext)
++                show(parent, onDismiss, controlActionCoordinator.activityContext)
+                 val showAnim = ObjectAnimator.ofFloat(parent, "alpha", 0.0f, 1.0f)
+                 showAnim.setInterpolator(DecelerateInterpolator(1.0f))
+                 showAnim.setDuration(FADE_IN_MILLIS)
+@@ -308,21 +309,35 @@ class ControlsUiControllerImpl @Inject constructor (
+     }
+ 
+     private fun showInitialSetupView(items: List<SelectionItem>) {
+-        startProviderSelectorActivity()
+-        onDismiss.run()
++        val inflater = LayoutInflater.from(context)
++        inflater.inflate(R.layout.controls_no_favorites, parent, true)
++
++        val viewGroup = parent.requireViewById(R.id.controls_no_favorites_group) as ViewGroup
++        viewGroup.setOnClickListener { v: View -> startProviderSelectorActivity(v.context) }
++
++        val subtitle = parent.requireViewById<TextView>(R.id.controls_subtitle)
++        subtitle.setText(context.resources.getString(R.string.quick_controls_subtitle))
++
++        val iconRowGroup = parent.requireViewById(R.id.controls_icon_row) as ViewGroup
++        items.forEach {
++            val imageView = inflater.inflate(R.layout.controls_icon, viewGroup, false) as ImageView
++            imageView.setContentDescription(it.getTitle())
++            imageView.setImageDrawable(it.icon)
++            iconRowGroup.addView(imageView)
++        }
+     }
+ 
+-    private fun startFavoritingActivity(si: StructureInfo) {
+-        startTargetedActivity(si, ControlsFavoritingActivity::class.java)
++    private fun startFavoritingActivity(context: Context, si: StructureInfo) {
++        startTargetedActivity(context, si, ControlsFavoritingActivity::class.java)
+     }
+ 
+-    private fun startEditingActivity(si: StructureInfo) {
+-        startTargetedActivity(si, ControlsEditingActivity::class.java)
++    private fun startEditingActivity(context: Context, si: StructureInfo) {
++        startTargetedActivity(context, si, ControlsEditingActivity::class.java)
+     }
+ 
+-    private fun startDefaultActivity() {
++    private fun startDefaultActivity(context: Context) {
+         openAppIntent?.let {
+-            startActivity(it, animateExtra = false)
++            startActivity(context, it, animateExtra = false)
+         }
+     }
+ 
+@@ -349,10 +364,12 @@ class ControlsUiControllerImpl @Inject constructor (
+         }.apply { show() }
+     }
+ 
+-    private fun startTargetedActivity(si: StructureInfo, klazz: Class<*>) {
+-        val i = Intent(activityContext, klazz)
++    private fun startTargetedActivity(context: Context, si: StructureInfo, klazz: Class<*>) {
++        val i = Intent(context, klazz).apply {
++            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
++        }
+         putIntentExtras(i, si)
+-        startActivity(i)
++        startActivity(context, i)
+ 
+         retainCache = true
+     }
+@@ -366,25 +383,37 @@ class ControlsUiControllerImpl @Inject constructor (
+         }
+     }
+ 
+-    private fun startProviderSelectorActivity() {
+-        val i = Intent(activityContext, ControlsProviderSelectorActivity::class.java)
++    private fun startProviderSelectorActivity(context: Context) {
++        val i = Intent(context, ControlsProviderSelectorActivity::class.java).apply {
++            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
++        }
+         i.putExtra(ControlsProviderSelectorActivity.BACK_SHOULD_EXIT, true)
+-        startActivity(i)
++        startActivity(context, i)
+     }
+ 
+-    private fun startActivity(intent: Intent, animateExtra: Boolean = true) {
++    private fun startActivity(context: Context, intent: Intent, animateExtra: Boolean = true) {
+         // Force animations when transitioning from a dialog to an activity
+         if (animateExtra) {
+             intent.putExtra(ControlsUiController.EXTRA_ANIMATE, true)
+         }
+ 
++        intent.putExtra(
++            ControlsUiController.BACK_TO_GLOBAL_ACTIONS,
++            controlActionCoordinator.activityContext == null
++        )
++        onDismiss.run()
++
+         if (keyguardStateController.isShowing()) {
+             activityStarter.postStartActivityDismissingKeyguard(intent, 0 /* delay */)
+         } else {
+-            activityContext.startActivity(
+-                intent,
+-                ActivityOptions.makeSceneTransitionAnimation(activityContext as Activity).toBundle()
+-            )
++            if (context is Activity) {
++                context.startActivity(
++                    intent,
++                    ActivityOptions.makeSceneTransitionAnimation(context).toBundle()
++                )
++            } else {
++                context.startActivity(intent)
++            }
+         }
+     }
+ 
+@@ -480,9 +509,9 @@ class ControlsUiControllerImpl @Inject constructor (
+         val container = parent.requireViewById<FrameLayout>(R.id.controls_panel)
+         container.visibility = View.VISIBLE
+         container.post {
+-            taskViewFactory.get().create(activityContext, uiExecutor) { taskView ->
++            taskViewFactory.get().create(context, uiExecutor) { taskView ->
+                 taskViewController = PanelTaskViewController(
+-                        activityContext,
++                        context,
+                         uiExecutor,
+                         pendingIntent,
+                         taskView,
+@@ -554,12 +583,12 @@ class ControlsUiControllerImpl @Inject constructor (
+                             id: Long
+                         ) {
+                             when (id) {
+-                                OPEN_APP_ID -> startDefaultActivity()
+-                                ADD_APP_ID -> startProviderSelectorActivity()
+-                                ADD_CONTROLS_ID -> startFavoritingActivity(selectedStructure)
+-                                EDIT_CONTROLS_ID -> startEditingActivity(selectedStructure)
++                                OPEN_APP_ID -> startDefaultActivity(view.context)
++                                ADD_APP_ID -> startProviderSelectorActivity(view.context)
++                                ADD_CONTROLS_ID -> startFavoritingActivity(view.context, selectedStructure)
++                                EDIT_CONTROLS_ID -> startEditingActivity(view.context, selectedStructure)
+                                 REMOVE_APP_ID -> startRemovingApp(
+-                                        selectionItem.componentName, selectionItem.appName
++                                    selectionItem.componentName, selectionItem.appName
+                                 )
+                             }
+                             dismiss()
+@@ -644,21 +673,27 @@ class ControlsUiControllerImpl @Inject constructor (
+     }
+ 
+     private fun createControlsSpaceFrame() {
+-        val inflater = LayoutInflater.from(activityContext)
++        val inflater = LayoutInflater.from(context)
+         inflater.inflate(R.layout.controls_with_favorites, parent, true)
+ 
+-        parent.requireViewById<ImageView>(R.id.controls_close).apply {
+-            setOnClickListener { _: View -> onDismiss.run() }
+-            visibility = View.VISIBLE
++        if (controlActionCoordinator.activityContext == null) {
++            parent.requireViewById<View>(R.id.controls_spacer).apply {
++                visibility = View.VISIBLE
++            }
++        } else {
++            parent.requireViewById<ImageView>(R.id.controls_close).apply {
++                setOnClickListener { _: View -> onDismiss.run() }
++                visibility = View.VISIBLE
++            }
+         }
+     }
+ 
+     private fun createListView(selected: SelectionItem) {
+         if (selectedItem !is SelectedItem.StructureItem) return
+         val selectedStructure = (selectedItem as SelectedItem.StructureItem).structure
+-        val inflater = LayoutInflater.from(activityContext)
++        val inflater = LayoutInflater.from(context)
+ 
+-        val maxColumns = ControlAdapter.findMaxColumns(activityContext.resources)
++        val maxColumns = ControlAdapter.findMaxColumns(context.resources)
+ 
+         val listView = parent.requireViewById(R.id.global_actions_controls_list) as ViewGroup
+         listView.removeAllViews()
+@@ -770,6 +805,8 @@ class ControlsUiControllerImpl @Inject constructor (
+             Log.d(ControlsUiController.TAG, "hide()")
+             hidden = true
+ 
++            controlActionCoordinator.activityContext = null
++
+             closeDialogs(true)
+             controlsController.get().unsubscribe()
+             taskViewController?.dismiss()
+diff --git a/packages/SystemUI/src/com/android/systemui/controls/ui/DetailDialog.kt b/packages/SystemUI/src/com/android/systemui/controls/ui/DetailDialog.kt
+index edd1c6891946d5047dc877e332d3a4284b6e94ef..ff2c828982f1cb085486be241b68a8990def8341 100644
+--- a/packages/SystemUI/src/com/android/systemui/controls/ui/DetailDialog.kt
++++ b/packages/SystemUI/src/com/android/systemui/controls/ui/DetailDialog.kt
+@@ -44,7 +44,7 @@ import com.android.wm.shell.TaskView
+  * The activity being launched is specified by {@link android.service.controls.Control#getAppIntent}.
+  */
+ class DetailDialog(
+-    val activityContext: Context,
++    val activityContext: Context?,
+     val broadcastSender: BroadcastSender,
+     val taskView: TaskView,
+     val pendingIntent: PendingIntent,
+@@ -52,7 +52,7 @@ class DetailDialog(
+     val keyguardStateController: KeyguardStateController,
+     val activityStarter: ActivityStarter
+ ) : Dialog(
+-    activityContext,
++    activityContext ?: cvh.context,
+     R.style.Theme_SystemUI_Dialog_Control_DetailPanel
+ ) {
+     companion object {
+@@ -65,9 +65,6 @@ class DetailDialog(
+ 
+     var detailTaskId = INVALID_TASK_ID
+     private lateinit var taskViewContainer: View
+-    private val taskWidthPercentWidth = activityContext.resources.getFloat(
+-        R.dimen.controls_task_view_width_percentage
+-    )
+ 
+     private val fillInIntent = Intent().apply {
+         putExtra(EXTRA_USE_PANEL, true)
+@@ -85,18 +82,26 @@ class DetailDialog(
+ 
+     val stateCallback = object : TaskView.Listener {
+         override fun onInitialized() {
+-            taskViewContainer.apply {
+-                // For some devices, limit the overall width of the taskView
+-                val lp = getLayoutParams()
+-                lp.width = (getWidth() * taskWidthPercentWidth).toInt()
+-                setLayoutParams(lp)
++            activityContext?.let {
++                val taskWidthPercentWidth = activityContext.resources.getFloat(
++                    R.dimen.controls_task_view_width_percentage
++                )
++
++                taskViewContainer.apply {
++                    // For some devices, limit the overall width of the taskView
++                    val lp = getLayoutParams()
++                    lp.width = (getWidth() * taskWidthPercentWidth).toInt()
++                    setLayoutParams(lp)
++                }
+             }
+ 
+-            val options = ActivityOptions.makeCustomAnimation(
+-                activityContext,
+-                0 /* enterResId */,
+-                0 /* exitResId */
+-            )
++            val options = activityContext?.let {
++                ActivityOptions.makeCustomAnimation(
++                    it,
++                    0 /* enterResId */,
++                    0 /* exitResId */
++                )
++            } ?: ActivityOptions.makeBasic()
+             taskView.startActivity(
+                 pendingIntent,
+                 fillInIntent,
+@@ -127,6 +132,10 @@ class DetailDialog(
+     }
+ 
+     init {
++        if (activityContext == null) {
++            window.setType(WindowManager.LayoutParams.TYPE_VOLUME_OVERLAY)
++        }
++
+         // To pass touches to the task inside TaskView.
+         window.addFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL)
+         window.addPrivateFlags(WindowManager.LayoutParams.PRIVATE_FLAG_TRUSTED_OVERLAY)
+diff --git a/packages/SystemUI/src/com/android/systemui/globalactions/GlobalActionsDialog.java b/packages/SystemUI/src/com/android/systemui/globalactions/GlobalActionsDialog.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..46dde0276173590ff7d44c7e36ff47697838bf35
+--- /dev/null
++++ b/packages/SystemUI/src/com/android/systemui/globalactions/GlobalActionsDialog.java
+@@ -0,0 +1,592 @@
++/*
++ * Copyright (C) 2017 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
++ * except in compliance with the License. You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software distributed under the
++ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
++ * KIND, either express or implied. See the License for the specific language governing
++ * permissions and limitations under the License.
++ */
++
++package com.android.systemui.globalactions;
++
++import static android.view.ViewGroup.LayoutParams.MATCH_PARENT;
++
++import static com.android.internal.widget.LockPatternUtils.StrongAuthTracker.STRONG_AUTH_REQUIRED_AFTER_BOOT;
++import static com.android.systemui.controls.dagger.ControlsComponent.Visibility.AVAILABLE;
++import static com.android.systemui.controls.dagger.ControlsComponent.Visibility.AVAILABLE_AFTER_UNLOCK;
++
++import android.animation.Animator;
++import android.animation.AnimatorListenerAdapter;
++import android.annotation.Nullable;
++import android.app.IActivityManager;
++import android.app.PendingIntent;
++import android.app.admin.DevicePolicyManager;
++import android.app.trust.TrustManager;
++import android.content.Context;
++import android.content.pm.PackageManager;
++import android.content.res.Resources;
++import android.database.ContentObserver;
++import android.graphics.drawable.Drawable;
++import android.media.AudioManager;
++import android.os.Bundle;
++import android.os.Handler;
++import android.os.UserManager;
++import android.provider.Settings;
++import android.service.dreams.IDreamManager;
++import android.telecom.TelecomManager;
++import android.transition.AutoTransition;
++import android.transition.TransitionManager;
++import android.transition.TransitionSet;
++import android.view.IWindowManager;
++import android.view.View;
++import android.view.ViewGroup;
++import android.view.Window;
++import android.view.WindowInsets;
++import android.view.WindowManager;
++import android.widget.FrameLayout;
++import android.widget.TextView;
++
++import androidx.annotation.NonNull;
++
++import com.android.internal.R;
++import com.android.internal.annotations.VisibleForTesting;
++import com.android.internal.logging.MetricsLogger;
++import com.android.internal.logging.UiEventLogger;
++import com.android.internal.statusbar.IStatusBarService;
++import com.android.internal.view.RotationPolicy;
++import com.android.internal.widget.LockPatternUtils;
++import com.android.keyguard.KeyguardUpdateMonitor;
++import com.android.systemui.animation.DialogLaunchAnimator;
++import com.android.systemui.broadcast.BroadcastDispatcher;
++import com.android.systemui.colorextraction.SysuiColorExtractor;
++import com.android.systemui.controls.ControlsServiceInfo;
++import com.android.systemui.controls.dagger.ControlsComponent;
++import com.android.systemui.controls.management.ControlsAnimations;
++import com.android.systemui.controls.ui.ControlsUiController;
++import com.android.systemui.dagger.qualifiers.Background;
++import com.android.systemui.dagger.qualifiers.Main;
++import com.android.systemui.plugins.ActivityStarter;
++import com.android.systemui.plugins.GlobalActions.GlobalActionsManager;
++import com.android.systemui.plugins.GlobalActionsPanelPlugin;
++import com.android.systemui.settings.UserTracker;
++import com.android.systemui.statusbar.NotificationShadeWindowController;
++import com.android.systemui.statusbar.VibratorHelper;
++import com.android.systemui.statusbar.phone.CentralSurfaces;
++import com.android.systemui.statusbar.policy.ConfigurationController;
++import com.android.systemui.statusbar.policy.KeyguardStateController;
++import com.android.systemui.telephony.TelephonyListenerManager;
++import com.android.systemui.util.RingerModeTracker;
++import com.android.systemui.util.leak.RotationUtils;
++import com.android.systemui.util.settings.GlobalSettings;
++import com.android.systemui.util.settings.SecureSettings;
++
++import java.util.ArrayList;
++import java.util.List;
++import java.util.Optional;
++import java.util.concurrent.Executor;
++import java.util.function.Function;
++
++import javax.inject.Inject;
++import javax.inject.Provider;
++
++/**
++ * Helper to show the global actions dialog.  Each item is an {@link Action} that may show depending
++ * on whether the keyguard is showing, and whether the device is provisioned.
++ * This version includes wallet and controls.
++ */
++public class GlobalActionsDialog extends GlobalActionsDialogLite {
++
++    private static final String TAG = "GlobalActionsDialog";
++
++    private final LockPatternUtils mLockPatternUtils;
++    private final KeyguardStateController mKeyguardStateController;
++    private final ActivityStarter mActivityStarter;
++    private final SysuiColorExtractor mSysuiColorExtractor;
++    private final IStatusBarService mStatusBarService;
++    private final NotificationShadeWindowController mNotificationShadeWindowController;
++    private GlobalActionsPanelPlugin mWalletPlugin;
++    private final Optional<ControlsUiController> mControlsUiControllerOptional;
++    private List<? extends ControlsServiceInfo> mControlsServiceInfos = new ArrayList<>();
++    private final ControlsComponent mControlsComponent;
++    @VisibleForTesting
++    boolean mShowLockScreenCardsAndControls = false;
++
++    @Inject
++    public GlobalActionsDialog(
++            Context context,
++            GlobalActionsManager windowManagerFuncs,
++            AudioManager audioManager,
++            IDreamManager iDreamManager,
++            DevicePolicyManager devicePolicyManager,
++            LockPatternUtils lockPatternUtils,
++            BroadcastDispatcher broadcastDispatcher,
++            TelephonyListenerManager telephonyListenerManager,
++            GlobalSettings globalSettings,
++            SecureSettings secureSettings,
++            @NonNull VibratorHelper vibrator,
++            @Main Resources resources,
++            ConfigurationController configurationController,
++            UserTracker userTracker,
++            KeyguardStateController keyguardStateController,
++            UserManager userManager,
++            TrustManager trustManager,
++            IActivityManager iActivityManager,
++            @Nullable TelecomManager telecomManager,
++            MetricsLogger metricsLogger,
++            SysuiColorExtractor colorExtractor,
++            IStatusBarService statusBarService,
++            NotificationShadeWindowController notificationShadeWindowController,
++            IWindowManager iWindowManager,
++            @Background Executor backgroundExecutor,
++            UiEventLogger uiEventLogger,
++            RingerModeTracker ringerModeTracker,
++            @Main Handler handler,
++            PackageManager packageManager,
++            Optional<CentralSurfaces> centralSurfacesOptional,
++            KeyguardUpdateMonitor keyguardUpdateMonitor,
++            DialogLaunchAnimator dialogLaunchAnimator,
++            ControlsComponent controlsComponent,
++            ActivityStarter activityStarter) {
++        super(context, windowManagerFuncs, audioManager, iDreamManager, devicePolicyManager,
++                lockPatternUtils, broadcastDispatcher, telephonyListenerManager, globalSettings,
++                secureSettings, vibrator, resources, configurationController, userTracker,
++                keyguardStateController, userManager, trustManager, iActivityManager,
++                telecomManager, metricsLogger, colorExtractor, statusBarService,
++                notificationShadeWindowController, iWindowManager, backgroundExecutor,
++                uiEventLogger, ringerModeTracker, handler, packageManager, centralSurfacesOptional,
++                keyguardUpdateMonitor, dialogLaunchAnimator);
++
++        mLockPatternUtils = lockPatternUtils;
++        mKeyguardStateController = keyguardStateController;
++        mSysuiColorExtractor = colorExtractor;
++        mStatusBarService = statusBarService;
++        mNotificationShadeWindowController = notificationShadeWindowController;
++        mControlsComponent = controlsComponent;
++        mControlsUiControllerOptional = controlsComponent.getControlsUiController();
++        mActivityStarter = activityStarter;
++        keyguardStateController.addCallback(new KeyguardStateController.Callback() {
++            @Override
++            public void onUnlockedChanged() {
++                if (mDialog != null) {
++                    ActionsDialog dialog = (ActionsDialog) mDialog;
++                    boolean unlocked = mKeyguardStateController.isUnlocked();
++                    if (dialog.mWalletViewController != null) {
++                        dialog.mWalletViewController.onDeviceLockStateChanged(!unlocked);
++                    }
++                    if (!dialog.isShowingControls()
++                            && mControlsComponent.getVisibility() == AVAILABLE) {
++                        dialog.showControls(mControlsUiControllerOptional.get());
++                    }
++                    if (unlocked) {
++                        dialog.hideLockMessage();
++                    }
++                }
++            }
++        });
++
++        if (mControlsComponent.getControlsListingController().isPresent()) {
++            mControlsComponent.getControlsListingController().get()
++                    .addCallback(list -> {
++                        mControlsServiceInfos = list;
++                        // This callback may occur after the dialog has been shown. If so, add
++                        // controls into the already visible space or show the lock msg if needed.
++                        if (mDialog != null) {
++                            ActionsDialog dialog = (ActionsDialog) mDialog;
++                            if (!dialog.isShowingControls()
++                                    && mControlsComponent.getVisibility() == AVAILABLE) {
++                                dialog.showControls(mControlsUiControllerOptional.get());
++                            } else if (shouldShowLockMessage(dialog)) {
++                                dialog.showLockMessage();
++                            }
++                        }
++                    });
++        }
++
++        // Listen for changes to show controls on the power menu while locked
++        onPowerMenuLockScreenSettingsChanged();
++        mGlobalSettings.registerContentObserver(
++                Settings.Secure.getUriFor(Settings.Secure.POWER_MENU_LOCKED_SHOW_CONTENT),
++                false /* notifyForDescendants */,
++                new ContentObserver(handler) {
++                    @Override
++                    public void onChange(boolean selfChange) {
++                        onPowerMenuLockScreenSettingsChanged();
++                    }
++                });
++    }
++
++    public void showOrHideDialog(boolean keyguardShowing, boolean isDeviceProvisioned,
++            GlobalActionsPanelPlugin walletPlugin) {
++        mWalletPlugin = walletPlugin;
++        super.showOrHideDialog(keyguardShowing, isDeviceProvisioned, null);
++    }
++
++    @VisibleForTesting
++    @Override
++    protected int getMaxShownPowerItems() {
++        return getContext().getResources().getInteger(
++                com.android.systemui.R.integer.power_menu_max_columns);
++    }
++
++    /**
++     * Create the global actions dialog.
++     *
++     * @return A new dialog.
++     */
++    @Override
++    protected ActionsDialogLite createDialog() {
++        initDialogItems();
++
++        ControlsUiController uiController = null;
++        if (mControlsComponent.getVisibility() == AVAILABLE) {
++            uiController = mControlsUiControllerOptional.get();
++        }
++        ActionsDialog dialog = new ActionsDialog(getContext(),
++                com.android.systemui.R.style.Theme_SystemUI_Dialog_GlobalActions,
++                mAdapter, mOverflowAdapter, mSysuiColorExtractor, mStatusBarService,
++                mNotificationShadeWindowController, this::onRefresh, isKeyguardShowing(),
++                mPowerAdapter, getEventLogger(), getCentralSurfaces(), getKeyguardUpdateMonitor(),
++                mLockPatternUtils, controlsAvailable(), uiController, this::getWalletViewController, this::shouldShowLockMessage);
++
++        dialog.setCanceledOnTouchOutside(false); // Handled by the custom class.
++        dialog.setOnDismissListener(this);
++        dialog.setOnShowListener(this);
++
++        return dialog;
++    }
++
++    @Nullable
++    private GlobalActionsPanelPlugin.PanelViewController getWalletViewController() {
++        if (mWalletPlugin == null) {
++            return null;
++        }
++        return mWalletPlugin.onPanelShown(this, !mKeyguardStateController.isUnlocked());
++    }
++
++    /**
++     * Implements {@link GlobalActionsPanelPlugin.Callbacks#dismissGlobalActionsMenu()}, which is
++     * called when the quick access wallet requests that an intent be started (with lock screen
++     * shown first if needed).
++     */
++    @Override
++    public void startPendingIntentDismissingKeyguard(PendingIntent pendingIntent) {
++        mActivityStarter.startPendingIntentDismissingKeyguard(pendingIntent);
++    }
++
++    @Override
++    protected int getEmergencyTextColor(Context context) {
++        return context.getResources().getColor(
++                com.android.systemui.R.color.global_actions_emergency_text);
++    }
++
++    @Override
++    protected int getEmergencyIconColor(Context context) {
++        return getContext().getResources().getColor(
++                com.android.systemui.R.color.global_actions_emergency_text);
++    }
++
++    @Override
++    protected int getEmergencyBackgroundColor(Context context) {
++        return getContext().getResources().getColor(
++                com.android.systemui.R.color.global_actions_emergency_background);
++    }
++
++    @Override
++    protected int getGridItemLayoutResource() {
++        return com.android.systemui.R.layout.global_actions_grid_item_v2;
++    }
++
++    @VisibleForTesting
++    static class ActionsDialog extends ActionsDialogLite {
++
++        private final Provider<GlobalActionsPanelPlugin.PanelViewController> mWalletFactory;
++        private final Function<ActionsDialog, Boolean> mShouldShowLockMessage;
++        @Nullable private GlobalActionsPanelPlugin.PanelViewController mWalletViewController;
++        private ResetOrientationData mResetOrientationData;
++        private final boolean mControlsAvailable;
++
++        private ControlsUiController mControlsUiController;
++        private ViewGroup mControlsView;
++        @VisibleForTesting ViewGroup mLockMessageContainer;
++        private TextView mLockMessage;
++
++        ActionsDialog(Context context, int themeRes, MyAdapter adapter,
++                MyOverflowAdapter overflowAdapter,
++                SysuiColorExtractor sysuiColorExtractor, IStatusBarService statusBarService,
++                NotificationShadeWindowController notificationShadeWindowController,
++                Runnable onRefreshCallback, boolean keyguardShowing,
++                MyPowerOptionsAdapter powerAdapter, UiEventLogger uiEventLogger,
++                Optional<CentralSurfaces> centralSurfacesOptional,
++                KeyguardUpdateMonitor keyguardUpdateMonitor,
++                LockPatternUtils lockPatternUtils,
++                boolean controlsAvailable, @Nullable ControlsUiController controlsUiController,
++                Provider<GlobalActionsPanelPlugin.PanelViewController> walletFactory,
++                Function<ActionsDialog, Boolean> shouldShowLockMessage) {
++            super(context, themeRes, adapter, overflowAdapter, sysuiColorExtractor,
++                    statusBarService, notificationShadeWindowController, onRefreshCallback,
++                    keyguardShowing, powerAdapter, uiEventLogger, centralSurfacesOptional,
++                    keyguardUpdateMonitor, lockPatternUtils);
++
++            mControlsAvailable = controlsAvailable;
++            mControlsUiController = controlsUiController;
++            mWalletFactory = walletFactory;
++            mShouldShowLockMessage = shouldShowLockMessage;
++
++            // Update window attributes
++            Window window = getWindow();
++            window.getAttributes().systemUiVisibility |= View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
++                    | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
++                    | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION;
++            window.setLayout(MATCH_PARENT, MATCH_PARENT);
++            window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
++            window.addFlags(
++                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
++                            | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
++                            | WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR
++                            | WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
++                            | WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
++                            | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED);
++            setTitle(R.string.global_actions);
++        }
++
++        @Override
++        protected boolean shouldAnimateInWindow() {
++            return true;
++        }
++
++        private boolean isShowingControls() {
++            return mControlsUiController != null;
++        }
++
++        private void showControls(ControlsUiController controller) {
++            mControlsUiController = controller;
++            mControlsUiController.show(mControlsView, this::dismissForControlsActivity,
++                    null /* activityContext */);
++        }
++
++        private boolean isWalletViewAvailable() {
++            return mWalletViewController != null && mWalletViewController.getPanelContent() != null;
++        }
++
++        private void initializeWalletView() {
++            if (mWalletFactory == null) {
++                return;
++            }
++            mWalletViewController = mWalletFactory.get();
++            if (!isWalletViewAvailable()) {
++                return;
++            }
++
++            int rotation = RotationUtils.getRotation(mContext);
++            boolean rotationLocked = RotationPolicy.isRotationLocked(mContext);
++            if (rotation != RotationUtils.ROTATION_NONE) {
++                if (rotationLocked) {
++                    if (mResetOrientationData == null) {
++                        mResetOrientationData = new ResetOrientationData();
++                        mResetOrientationData.locked = true;
++                        mResetOrientationData.rotation = rotation;
++                    }
++
++                    // Unlock rotation, so user can choose to rotate to portrait to see the panel.
++                    // This call is posted so that the rotation does not change until post-layout,
++                    // otherwise onConfigurationChanged() may not get invoked.
++                    mGlobalActionsLayout.post(() ->
++                            RotationPolicy.setRotationLockAtAngle(
++                                    mContext, false, RotationUtils.ROTATION_NONE));
++
++                    return;
++                }
++            } else {
++                if (!rotationLocked) {
++                    if (mResetOrientationData == null) {
++                        mResetOrientationData = new ResetOrientationData();
++                        mResetOrientationData.locked = false;
++                    }
++                }
++
++                if (!rotationLocked) {
++                    // Locks the screen to portrait if the landscape / seascape orientation does not
++                    // show the wallet view, so the user doesn't accidentally hide the panel.
++                    // This call is posted so that the rotation does not change until post-layout,
++                    // otherwise onConfigurationChanged() may not get invoked.
++                    mGlobalActionsLayout.post(() ->
++                            RotationPolicy.setRotationLockAtAngle(
++                            mContext, true, RotationUtils.ROTATION_NONE));
++                }
++            }
++
++            // Disable rotation suggestions, if enabled
++            setRotationSuggestionsEnabled(false);
++
++            FrameLayout panelContainer =
++                    findViewById(com.android.systemui.R.id.global_actions_wallet);
++            FrameLayout.LayoutParams panelParams =
++                    new FrameLayout.LayoutParams(
++                            FrameLayout.LayoutParams.MATCH_PARENT,
++                            FrameLayout.LayoutParams.MATCH_PARENT);
++            if (!mControlsAvailable) {
++                panelParams.topMargin = mContext.getResources().getDimensionPixelSize(
++                        com.android.systemui.R.dimen.global_actions_wallet_top_margin);
++            }
++            View walletView = mWalletViewController.getPanelContent();
++            panelContainer.addView(walletView, panelParams);
++            // Smooth transitions when wallet is resized, which can happen when a card is added
++            ViewGroup root = findViewById(com.android.systemui.R.id.global_actions_grid_root);
++            if (root != null) {
++                walletView.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
++                    int oldHeight = ob - ot;
++                    int newHeight = b - t;
++                    if (oldHeight > 0 && oldHeight != newHeight) {
++                        TransitionSet transition = new AutoTransition()
++                                .setDuration(250)
++                                .setOrdering(TransitionSet.ORDERING_TOGETHER);
++                        TransitionManager.beginDelayedTransition(root, transition);
++                    }
++                });
++            }
++        }
++
++        @Override
++        protected int getLayoutResource() {
++            return com.android.systemui.R.layout.global_actions_grid_v2;
++        }
++
++        @Override
++        protected void initializeLayout() {
++            super.initializeLayout();
++            mControlsView = findViewById(com.android.systemui.R.id.global_actions_controls);
++            mLockMessageContainer = requireViewById(
++                    com.android.systemui.R.id.global_actions_lock_message_container);
++            mLockMessage = requireViewById(com.android.systemui.R.id.global_actions_lock_message);
++            initializeWalletView();
++            getWindow().setBackgroundDrawable(mBackgroundDrawable);
++        }
++
++        @Override
++        protected void onCreate(Bundle savedInstanceState) {
++            super.onCreate(savedInstanceState);
++
++            ViewGroup root = (ViewGroup) mGlobalActionsLayout.getRootView();
++            root.setOnApplyWindowInsetsListener((v, windowInsets) -> {
++                root.setPadding(windowInsets.getStableInsetLeft(),
++                        windowInsets.getStableInsetTop(),
++                        windowInsets.getStableInsetRight(),
++                        windowInsets.getStableInsetBottom());
++                return WindowInsets.CONSUMED;
++            });
++
++            if (mShouldShowLockMessage.apply(this)) showLockMessage();
++
++            if (mControlsUiController != null) {
++                mControlsUiController.show(mControlsView, this::dismissForControlsActivity,
++                        null /* activityContext */);
++            }
++        }
++
++        @Override
++        protected void startAnimation(boolean isEnter, @Nullable Runnable then) {
++            super.startAnimation(isEnter, then);
++
++            if (!isEnter) {
++                if (mControlsUiController != null) mControlsUiController.closeDialogs(false);
++            }
++        }
++
++        private void dismissForControlsActivity() {
++            ViewGroup root = (ViewGroup) mGlobalActionsLayout.getParent();
++            ControlsAnimations.exitAnimation(root, this::dismiss).start();
++        }
++
++        @Override
++        public void dismiss() {
++            dismissWallet();
++            if (mControlsUiController != null) mControlsUiController.hide(mControlsView);
++            resetOrientation();
++            super.dismiss();
++        }
++
++        private void dismissWallet() {
++            if (mWalletViewController != null) {
++                mWalletViewController.onDismissed();
++                // The wallet controller should not be re-used after being dismissed.
++                mWalletViewController = null;
++            }
++        }
++
++        private void resetOrientation() {
++            if (mResetOrientationData != null) {
++                RotationPolicy.setRotationLockAtAngle(mContext, mResetOrientationData.locked,
++                        mResetOrientationData.rotation);
++            }
++            setRotationSuggestionsEnabled(true);
++        }
++
++        @Override
++        public void refreshDialog() {
++            // ensure dropdown menus are dismissed before re-initializing the dialog
++            dismissWallet();
++            if (mControlsUiController != null) {
++                mControlsUiController.hide(mControlsView);
++            }
++
++            super.refreshDialog();
++            if (mControlsUiController != null) {
++                mControlsUiController.show(mControlsView, this::dismissForControlsActivity,
++                        null /* activityContext */);
++            }
++        }
++
++        void hideLockMessage() {
++            if (mLockMessageContainer.getVisibility() == View.VISIBLE) {
++                mLockMessageContainer.animate().alpha(0).setDuration(150).setListener(
++                        new AnimatorListenerAdapter() {
++                            @Override
++                            public void onAnimationEnd(Animator animation) {
++                                mLockMessageContainer.setVisibility(View.GONE);
++                            }
++                        }).start();
++            }
++        }
++
++        void showLockMessage() {
++            Drawable lockIcon = mContext.getDrawable(com.android.internal.R.drawable.ic_lock);
++            lockIcon.setTint(mContext.getColor(com.android.systemui.R.color.control_primary_text));
++            mLockMessage.setCompoundDrawablesWithIntrinsicBounds(null, lockIcon, null, null);
++            mLockMessageContainer.setVisibility(View.VISIBLE);
++       }
++
++        private static class ResetOrientationData {
++            public boolean locked;
++            public int rotation;
++        }
++    }
++
++    private boolean controlsAvailable() {
++        return isDeviceProvisioned()
++                && mControlsComponent.isEnabled()
++                && !mControlsServiceInfos.isEmpty();
++    }
++
++    private boolean shouldShowLockMessage(ActionsDialog dialog) {
++        return mControlsComponent.getVisibility() == AVAILABLE_AFTER_UNLOCK
++                || isWalletAvailableAfterUnlock(dialog);
++    }
++
++    private boolean isWalletAvailableAfterUnlock(ActionsDialog dialog) {
++        boolean isLockedAfterBoot = mLockPatternUtils.getStrongAuthForUser(getCurrentUser().id)
++                == STRONG_AUTH_REQUIRED_AFTER_BOOT;
++        return !mKeyguardStateController.isUnlocked()
++                && (!mShowLockScreenCardsAndControls || isLockedAfterBoot)
++                && dialog.isWalletViewAvailable();
++    }
++
++    private void onPowerMenuLockScreenSettingsChanged() {
++        mShowLockScreenCardsAndControls = mSecureSettings.getInt(
++                Settings.Secure.POWER_MENU_LOCKED_SHOW_CONTENT, 0) != 0;
++    }
++}
+diff --git a/packages/SystemUI/src/com/android/systemui/globalactions/GlobalActionsDialogLite.java b/packages/SystemUI/src/com/android/systemui/globalactions/GlobalActionsDialogLite.java
+index 03b45b512010bd8dfc1fb283aa04001cb02d0e07..f49c1e8132b4d26dfbaaae00499538a53ff0b5ec 100644
+--- a/packages/SystemUI/src/com/android/systemui/globalactions/GlobalActionsDialogLite.java
++++ b/packages/SystemUI/src/com/android/systemui/globalactions/GlobalActionsDialogLite.java
+@@ -2512,8 +2512,7 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
+             // should be equal to 0 which means we need to animate the dialog in-window. If it's not
+             // equal to 0, it means it has been overridden to animate (e.g. by the
+             // DialogLaunchAnimator) so we don't run the animation.
+-            boolean shouldAnimateInWindow = getWindow().getAttributes().windowAnimations == 0;
+-            if (shouldAnimateInWindow) {
++            if (shouldAnimateInWindow()) {
+                 startAnimation(true /* isEnter */, null /* then */);
+ 
+                 // Override the dialog dismiss so that we can animate in-window before dismissing
+@@ -2530,8 +2529,12 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
+             }
+         }
+ 
++        protected boolean shouldAnimateInWindow() {
++            return getWindow().getAttributes().windowAnimations == 0;
++        }
++
+         /** Run either the enter or exit animation, then run {@code then}. */
+-        private void startAnimation(boolean isEnter, @Nullable Runnable then) {
++        protected void startAnimation(boolean isEnter, @Nullable Runnable then) {
+             ValueAnimator animator = ValueAnimator.ofFloat(0f, 1f);
+ 
+             // Note: these specs should be the same as in popup_enter_material and
+@@ -2555,7 +2558,7 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
+                 float progress = (float) valueAnimator.getAnimatedValue();
+ 
+                 float alpha = isEnter ? progress : 1 - progress;
+-                mGlobalActionsLayout.setAlpha(alpha);
++                mContainer.setAlpha(alpha);
+                 window.setDimAmount(mWindowDimAmount * alpha);
+ 
+                 // TODO(b/213872558): Support devices that don't have their power button on the
+@@ -2564,16 +2567,16 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
+                         isEnter ? translationPx * (1 - progress) : translationPx * progress;
+                 switch (rotation) {
+                     case Surface.ROTATION_0:
+-                        mGlobalActionsLayout.setTranslationX(translation);
++                        mContainer.setTranslationX(translation);
+                         break;
+                     case Surface.ROTATION_90:
+-                        mGlobalActionsLayout.setTranslationY(-translation);
++                        mContainer.setTranslationY(-translation);
+                         break;
+                     case Surface.ROTATION_180:
+-                        mGlobalActionsLayout.setTranslationX(-translation);
++                        mContainer.setTranslationX(-translation);
+                         break;
+                     case Surface.ROTATION_270:
+-                        mGlobalActionsLayout.setTranslationY(translation);
++                        mContainer.setTranslationY(translation);
+                         break;
+                 }
+             });
+@@ -2583,13 +2586,13 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
+ 
+                 @Override
+                 public void onAnimationStart(Animator animation, boolean isReverse) {
+-                    mPreviousLayerType = mGlobalActionsLayout.getLayerType();
+-                    mGlobalActionsLayout.setLayerType(View.LAYER_TYPE_HARDWARE, null);
++                    mPreviousLayerType = mContainer.getLayerType();
++                    mContainer.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+                 }
+ 
+                 @Override
+                 public void onAnimationEnd(Animator animation) {
+-                    mGlobalActionsLayout.setLayerType(mPreviousLayerType, null);
++                    mContainer.setLayerType(mPreviousLayerType, null);
+                     if (then != null) {
+                         then.run();
+                     }
+diff --git a/packages/SystemUI/src/com/android/systemui/globalactions/GlobalActionsImpl.java b/packages/SystemUI/src/com/android/systemui/globalactions/GlobalActionsImpl.java
+index 290bf0d0734c170ce1ab9f687007afcabc5557cf..4c42289f02f80f7fa05535632c320a308ac33ba4 100644
+--- a/packages/SystemUI/src/com/android/systemui/globalactions/GlobalActionsImpl.java
++++ b/packages/SystemUI/src/com/android/systemui/globalactions/GlobalActionsImpl.java
+@@ -22,6 +22,7 @@ import android.annotation.StringRes;
+ import android.app.Dialog;
+ import android.content.Context;
+ import android.os.PowerManager;
++import android.provider.Settings;
+ import android.view.View;
+ import android.view.ViewGroup;
+ import android.view.Window;
+@@ -31,51 +32,85 @@ import android.widget.TextView;
+ 
+ import com.android.internal.R;
+ import com.android.settingslib.Utils;
++import com.android.systemui.Dependency;
+ import com.android.systemui.plugins.GlobalActions;
++import com.android.systemui.plugins.GlobalActionsPanelPlugin;
+ import com.android.systemui.scrim.ScrimDrawable;
+ import com.android.systemui.statusbar.BlurUtils;
+ import com.android.systemui.statusbar.CommandQueue;
+-import com.android.systemui.statusbar.phone.ScrimController;
+ import com.android.systemui.statusbar.policy.DeviceProvisionedController;
++import com.android.systemui.statusbar.policy.ExtensionController;
+ import com.android.systemui.statusbar.policy.KeyguardStateController;
++import com.android.systemui.util.settings.SecureSettings;
+ 
+ import javax.inject.Inject;
+ 
++import dagger.Lazy;
++
+ public class GlobalActionsImpl implements GlobalActions, CommandQueue.Callbacks {
+ 
+     private final Context mContext;
++    private final Lazy<GlobalActionsDialog> mGlobalActionsDialogLazy;
+     private final KeyguardStateController mKeyguardStateController;
+     private final DeviceProvisionedController mDeviceProvisionedController;
++    private final ExtensionController.Extension<GlobalActionsPanelPlugin> mWalletPluginProvider;
+     private final BlurUtils mBlurUtils;
+     private final CommandQueue mCommandQueue;
+-    private final GlobalActionsDialogLite mGlobalActionsDialog;
++    private final SecureSettings mSecureSettings;
++    private GlobalActionsDialog mGlobalActionsDialog;
++    private final GlobalActionsDialogLite mGlobalActionsDialogLite;
+     private boolean mDisabled;
+ 
+     @Inject
+     public GlobalActionsImpl(Context context, CommandQueue commandQueue,
++            Lazy<GlobalActionsDialog> globalActionsDialogLazy,
+             GlobalActionsDialogLite globalActionsDialog, BlurUtils blurUtils,
+             KeyguardStateController keyguardStateController,
+-            DeviceProvisionedController deviceProvisionedController) {
++            DeviceProvisionedController deviceProvisionedController,
++            SecureSettings secureSettings) {
+         mContext = context;
+-        mGlobalActionsDialog = globalActionsDialog;
++        mGlobalActionsDialogLazy = globalActionsDialogLazy;
++        mGlobalActionsDialogLite = globalActionsDialog;
+         mKeyguardStateController = keyguardStateController;
+         mDeviceProvisionedController = deviceProvisionedController;
+         mCommandQueue = commandQueue;
+         mBlurUtils = blurUtils;
+         mCommandQueue.addCallback(this);
++        mSecureSettings = secureSettings;
++        mWalletPluginProvider = Dependency.get(ExtensionController.class)
++                .newExtension(GlobalActionsPanelPlugin.class)
++                .withPlugin(GlobalActionsPanelPlugin.class)
++                .build();
+     }
+ 
+     @Override
+     public void destroy() {
+         mCommandQueue.removeCallback(this);
+-        mGlobalActionsDialog.destroy();
++        if (mGlobalActionsDialog != null) {
++            mGlobalActionsDialog.destroy();
++            mGlobalActionsDialog = null;
++        }
++        mGlobalActionsDialogLite.destroy();
+     }
+ 
+     @Override
+     public void showGlobalActions(GlobalActionsManager manager) {
+         if (mDisabled) return;
+-        mGlobalActionsDialog.showOrHideDialog(mKeyguardStateController.isShowing(),
+-                mDeviceProvisionedController.isDeviceProvisioned(), null /* view */);
++        switch (mSecureSettings.getInt(Settings.Secure.POWER_MENU_TYPE, 0)) {
++            case 0: {
++                mGlobalActionsDialogLite.showOrHideDialog(mKeyguardStateController.isShowing(),
++                        mDeviceProvisionedController.isDeviceProvisioned(), null /* view */);
++                break;
++            }
++
++            case 1: {
++                mGlobalActionsDialog = mGlobalActionsDialogLazy.get();
++                mGlobalActionsDialog.showOrHideDialog(mKeyguardStateController.isShowing(),
++                        mDeviceProvisionedController.isDeviceProvisioned(),
++                        mWalletPluginProvider.get());
++                break;
++            }
++        }
+     }
+ 
+     @Override
+@@ -87,7 +122,8 @@ public class GlobalActionsImpl implements GlobalActions, CommandQueue.Callbacks
+ 
+         d.setOnShowListener(dialog -> {
+             if (mBlurUtils.supportsBlursOnWindows()) {
+-                int backgroundAlpha = (int) (ScrimController.BUSY_SCRIM_ALPHA * 255);
++                float BLUR_SCRIM_ALPHA = 0.54f;
++                int backgroundAlpha = (int) (BLUR_SCRIM_ALPHA * 255);
+                 background.setAlpha(backgroundAlpha);
+                 mBlurUtils.applyBlur(d.getWindow().getDecorView().getViewRootImpl(),
+                         (int) mBlurUtils.blurRadiusOfRatio(1), backgroundAlpha == 255);
+@@ -183,7 +219,10 @@ public class GlobalActionsImpl implements GlobalActions, CommandQueue.Callbacks
+         if (displayId != mContext.getDisplayId() || disabled == mDisabled) return;
+         mDisabled = disabled;
+         if (disabled) {
+-            mGlobalActionsDialog.dismissDialog();
++            if (mGlobalActionsDialog != null) {
++                mGlobalActionsDialog.dismissDialog();
++            }
++            mGlobalActionsDialogLite.dismissDialog();
+         }
+     }
+ }
+diff --git a/packages/SystemUI/src/com/android/systemui/globalactions/GlobalActionsPopupMenu.java b/packages/SystemUI/src/com/android/systemui/globalactions/GlobalActionsPopupMenu.java
+index de67ba8a6ded4c59f13ed9af901ddeeb92a8d1a2..19a0dcc69dcbe3c2874817e89ee68814a129ab9e 100644
+--- a/packages/SystemUI/src/com/android/systemui/globalactions/GlobalActionsPopupMenu.java
++++ b/packages/SystemUI/src/com/android/systemui/globalactions/GlobalActionsPopupMenu.java
+@@ -22,6 +22,7 @@ import android.content.res.Resources;
+ import android.util.LayoutDirection;
+ import android.view.View;
+ import android.view.View.MeasureSpec;
++import android.view.WindowManager;
+ import android.widget.AdapterView;
+ import android.widget.ListAdapter;
+ import android.widget.ListPopupWindow;
+@@ -52,6 +53,8 @@ public class GlobalActionsPopupMenu extends ListPopupWindow {
+                 res.getDrawable(R.drawable.global_actions_popup_bg, context.getTheme()));
+         mIsDropDownMode = isDropDownMode;
+ 
++        // required to show above the global actions dialog
++        setWindowLayoutType(WindowManager.LayoutParams.TYPE_VOLUME_OVERLAY);
+         setInputMethodMode(INPUT_METHOD_NOT_NEEDED);
+         setModal(true);
+ 
+diff --git a/packages/SystemUI/src/com/android/systemui/globalactions/MinHeightScrollView.java b/packages/SystemUI/src/com/android/systemui/globalactions/MinHeightScrollView.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..622fa658f1b0ed90ff84e6154a27fce1e59c6cb0
+--- /dev/null
++++ b/packages/SystemUI/src/com/android/systemui/globalactions/MinHeightScrollView.java
+@@ -0,0 +1,43 @@
++/*
++ * Copyright (C) 2020 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.systemui.globalactions;
++
++import android.content.Context;
++import android.util.AttributeSet;
++import android.view.View;
++import android.widget.ScrollView;
++
++/**
++ * When measured, this view sets the minimum height of its first child to be equal to its own
++ * target height.
++ *
++ * This ensures fall-through click handlers can be placed on this view's child component.
++ */
++public class MinHeightScrollView extends ScrollView {
++    public MinHeightScrollView(Context context, AttributeSet attrs) {
++        super(context, attrs);
++    }
++
++    @Override
++    public void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
++        View firstChild = getChildAt(0);
++        if (firstChild != null) {
++            firstChild.setMinimumHeight(MeasureSpec.getSize(heightMeasureSpec));
++        }
++        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
++    }
++}
+diff --git a/packages/SystemUI/src/com/android/systemui/qs/tiles/DeviceControlsTile.kt b/packages/SystemUI/src/com/android/systemui/qs/tiles/DeviceControlsTile.kt
+index 01164fb0a009c8ab6ad3f66f4777cace0db547eb..89f4df57edef5c1081f8f611cd4e4417b17bf024 100644
+--- a/packages/SystemUI/src/com/android/systemui/qs/tiles/DeviceControlsTile.kt
++++ b/packages/SystemUI/src/com/android/systemui/qs/tiles/DeviceControlsTile.kt
+@@ -107,6 +107,7 @@ class DeviceControlsTile @Inject constructor(
+                 .resolveActivity())
+             addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+             putExtra(ControlsUiController.EXTRA_ANIMATE, true)
++            putExtra(ControlsUiController.BACK_TO_GLOBAL_ACTIONS, false)
+         }
+         val animationController = view?.let {
+             ActivityLaunchAnimator.Controller.fromView(

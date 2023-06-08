@@ -1,0 +1,120 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: js6pak <me@6pak.dev>
+Date: Thu, 8 Jun 2023 03:41:48 +0200
+Subject: [PATCH] Add no navbar hint overlay
+
+Based on LineageOS: https://github.com/LineageOS/android_packages_overlays_Lineage/commit/35fb8bae39e632c947e2fa65e2c9eca20ded5cd0
+Feature: no-navbar-hint
+
+diff --git a/packages/overlays/Android.mk b/packages/overlays/Android.mk
+index 500d8d53b57388218221bef71976adcb41340796..b273345663fd3fe3216c74cea0484786aa8095d4 100644
+--- a/packages/overlays/Android.mk
++++ b/packages/overlays/Android.mk
+@@ -31,6 +31,7 @@ LOCAL_REQUIRED_MODULES := \
+ 	FontNotoSerifSourceOverlay \
+ 	NavigationBarMode3ButtonOverlay \
+ 	NavigationBarModeGesturalOverlay \
++	NavigationBarModeGesturalOverlayNoHint \
+ 	NavigationBarModeGesturalOverlayNarrowBack \
+ 	NavigationBarModeGesturalOverlayWideBack \
+ 	NavigationBarModeGesturalOverlayExtraWideBack \
+diff --git a/packages/overlays/NavigationBarModeGesturalOverlayNoHint/Android.bp b/packages/overlays/NavigationBarModeGesturalOverlayNoHint/Android.bp
+new file mode 100644
+index 0000000000000000000000000000000000000000..308c453656695ab59ef0ba01361f37639a09267c
+--- /dev/null
++++ b/packages/overlays/NavigationBarModeGesturalOverlayNoHint/Android.bp
+@@ -0,0 +1,30 @@
++//
++//  Copyright 2018, The Android Open Source Project
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     http://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++//
++
++package {
++    // See: http://go/android-license-faq
++    // A large-scale-change added 'default_applicable_licenses' to import
++    // all of the 'license_kinds' from "frameworks_base_license"
++    // to get the below license kinds:
++    //   SPDX-license-identifier-Apache-2.0
++    default_applicable_licenses: ["frameworks_base_license"],
++}
++
++runtime_resource_overlay {
++    name: "NavigationBarModeGesturalOverlayNoHint",
++    theme: "NavigationBarModeGesturalNoHint",
++    product_specific: true,
++}
+diff --git a/packages/overlays/NavigationBarModeGesturalOverlayNoHint/AndroidManifest.xml b/packages/overlays/NavigationBarModeGesturalOverlayNoHint/AndroidManifest.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..ea793cc466c1b02e014f7f262752920e6dc991d5
+--- /dev/null
++++ b/packages/overlays/NavigationBarModeGesturalOverlayNoHint/AndroidManifest.xml
+@@ -0,0 +1,24 @@
++<!--
++/**
++ * Copyright (c) 2018, The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++-->
++<manifest xmlns:android="http://schemas.android.com/apk/res/android"
++        package="com.android.internal.systemui.navbar.gestural_no_hint"
++        android:versionCode="1"
++        android:versionName="1.0">
++    <overlay android:targetPackage="android"
++        android:priority="1"/>
++</manifest>
+\ No newline at end of file
+diff --git a/packages/overlays/NavigationBarModeGesturalOverlayNoHint/res/values/dimens.xml b/packages/overlays/NavigationBarModeGesturalOverlayNoHint/res/values/dimens.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..732c74026a491196eecf12ef9df2fb69c8a8853a
+--- /dev/null
++++ b/packages/overlays/NavigationBarModeGesturalOverlayNoHint/res/values/dimens.xml
+@@ -0,0 +1,26 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++/**
++ * Copyright (c) 2019, The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++-->
++<resources>
++    <!-- Height of the bottom navigation / system bar. -->
++    <dimen name="navigation_bar_height">0dp</dimen>
++    <!-- Height of the bottom navigation bar in portrait; often the same as @dimen/navigation_bar_height -->
++    <dimen name="navigation_bar_height_landscape">0dp</dimen>
++    <!-- Width of the navigation bar when it is placed vertically on the screen -->
++    <dimen name="navigation_bar_width">0dp</dimen>
++</resources>
+\ No newline at end of file

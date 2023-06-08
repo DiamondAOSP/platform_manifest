@@ -1,0 +1,63 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: js6pak <me@6pak.dev>
+Date: Thu, 8 Jun 2023 03:24:48 +0200
+Subject: [PATCH] Include DiamondAOSP additions
+
+Feature: rebrand
+
+diff --git a/core/diamondaosp.mk b/core/diamondaosp.mk
+new file mode 100644
+index 0000000000000000000000000000000000000000..f1454c58cbd9bdcf70541a28e762e442072f7bd7
+--- /dev/null
++++ b/core/diamondaosp.mk
+@@ -0,0 +1,4 @@
++DIAMONDAOSP_VERSION := 13.0.0
++
++ADDITIONAL_SYSTEM_PROPERTIES += \
++    ro.diamondaosp.version=$(DIAMONDAOSP_VERSION)
+diff --git a/core/main.mk b/core/main.mk
+index ae0b86c6ce16fdea9be96e8aab604824ee805825..8311bb4178642dac936b2b6e80ada96160d5ec2d 100644
+--- a/core/main.mk
++++ b/core/main.mk
+@@ -463,6 +463,10 @@ BUILD_WITHOUT_PV := true
+ 
+ ADDITIONAL_SYSTEM_PROPERTIES += net.bt.name=Android
+ 
++# ------------------------------------------------------------
++# Include DiamondAOSP specific additions to build properties
++-include build/make/core/diamondaosp.mk
++
+ # ------------------------------------------------------------
+ # Define a function that, given a list of module tags, returns
+ # non-empty if that module should be installed in /system.
+diff --git a/envsetup.sh b/envsetup.sh
+index 739569eca7cd1029348fa2a249b745c4b9ed6be4..17d9bec40a3078bc3a6cf111ad402a880e5d6c64 100644
+--- a/envsetup.sh
++++ b/envsetup.sh
+@@ -542,11 +542,16 @@ function choosetype()
+ #
+ function chooseproduct()
+ {
++    echo "Build type choices are:"
++    echo "  - sdk_phone_x86_64 (emulator)"
++    echo "  - redfin (Pixel 5)"
++    echo
++
+     local default_value
+     if [ "x$TARGET_PRODUCT" != x ] ; then
+         default_value=$TARGET_PRODUCT
+     else
+-        default_value=aosp_arm64
++        default_value=sdk_phone_x86_64
+     fi
+ 
+     export TARGET_BUILD_APPS=
+@@ -595,7 +600,7 @@ function choosevariant()
+         index=$(($index+1))
+     done
+ 
+-    local default_value=eng
++    local default_value=userdebug
+     local ANSWER
+ 
+     export TARGET_BUILD_VARIANT=

@@ -1,0 +1,92 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: js6pak <me@6pak.dev>
+Date: Sun, 23 Jul 2023 15:25:40 +0200
+Subject: [PATCH] Protect stock fingerprint override property
+
+Based on ProtonAOSP: https://github.com/ProtonAOSP/android_system_sepolicy/commit/e2ef1b03acb063d1be7150e6949d088e0a11810c
+Feature: safetynet
+
+diff --git a/prebuilts/api/28.0/private/property_contexts b/prebuilts/api/28.0/private/property_contexts
+index 32be0b3772fce8e5ce2fb6baa28abf4ca64035cd..1c1db50a500df4bdbcd39b774b8cdf822de3451c 100644
+--- a/prebuilts/api/28.0/private/property_contexts
++++ b/prebuilts/api/28.0/private/property_contexts
+@@ -90,6 +90,7 @@ ro.crypto.              u:object_r:vold_prop:s0
+ # ro.build.fingerprint is either set in /system/build.prop, or is
+ # set at runtime by system_server.
+ ro.build.fingerprint    u:object_r:fingerprint_prop:s0
++ro.build.stock_fingerprint    u:object_r:fingerprint_prop:s0
+ 
+ ro.persistent_properties.ready  u:object_r:persistent_properties_ready_prop:s0
+ 
+diff --git a/prebuilts/api/29.0/private/property_contexts b/prebuilts/api/29.0/private/property_contexts
+index cb81ba69320703f001f2bb0b4ae88840b404f224..fb71c724caf72ef2b1583b47e6caa922b3f649bd 100644
+--- a/prebuilts/api/29.0/private/property_contexts
++++ b/prebuilts/api/29.0/private/property_contexts
+@@ -102,6 +102,7 @@ ro.crypto.              u:object_r:vold_prop:s0
+ # ro.build.fingerprint is either set in /system/build.prop, or is
+ # set at runtime by system_server.
+ ro.build.fingerprint    u:object_r:fingerprint_prop:s0
++ro.build.stock_fingerprint    u:object_r:fingerprint_prop:s0
+ 
+ ro.persistent_properties.ready  u:object_r:persistent_properties_ready_prop:s0
+ 
+diff --git a/prebuilts/api/30.0/private/property_contexts b/prebuilts/api/30.0/private/property_contexts
+index 7908bb1071a9ae9419ca339a44353d6331f4fb0e..0892bd3351aae061aedbae325863a73fae2178ba 100644
+--- a/prebuilts/api/30.0/private/property_contexts
++++ b/prebuilts/api/30.0/private/property_contexts
+@@ -118,6 +118,7 @@ ro.crypto.              u:object_r:vold_prop:s0
+ # ro.build.fingerprint is either set in /system/build.prop, or is
+ # set at runtime by system_server.
+ ro.build.fingerprint    u:object_r:fingerprint_prop:s0
++ro.build.stock_fingerprint    u:object_r:fingerprint_prop:s0
+ 
+ ro.persistent_properties.ready  u:object_r:persistent_properties_ready_prop:s0
+ 
+diff --git a/prebuilts/api/31.0/private/property_contexts b/prebuilts/api/31.0/private/property_contexts
+index e0700fe0afcbd369a3a9b730711550421223c11f..86dd91aa334df956ea97c030842a819fd0ac6ef5 100644
+--- a/prebuilts/api/31.0/private/property_contexts
++++ b/prebuilts/api/31.0/private/property_contexts
+@@ -133,6 +133,7 @@ ro.crypto.              u:object_r:vold_prop:s0
+ # ro.build.fingerprint is either set in /system/build.prop, or is
+ # set at runtime by system_server.
+ ro.build.fingerprint    u:object_r:fingerprint_prop:s0 exact string
++ro.build.stock_fingerprint    u:object_r:fingerprint_prop:s0 exact string
+ 
+ ro.persistent_properties.ready  u:object_r:persistent_properties_ready_prop:s0
+ 
+diff --git a/prebuilts/api/32.0/private/property_contexts b/prebuilts/api/32.0/private/property_contexts
+index cc284b5f32c2fcc4b498651ec137695e3ea854bd..1b851b34c0561fb381c4e8fd375d8701b7a21b7a 100644
+--- a/prebuilts/api/32.0/private/property_contexts
++++ b/prebuilts/api/32.0/private/property_contexts
+@@ -134,6 +134,7 @@ ro.crypto.              u:object_r:vold_prop:s0
+ # ro.build.fingerprint is either set in /system/build.prop, or is
+ # set at runtime by system_server.
+ ro.build.fingerprint    u:object_r:fingerprint_prop:s0 exact string
++ro.build.stock_fingerprint    u:object_r:fingerprint_prop:s0 exact string
+ 
+ ro.persistent_properties.ready  u:object_r:persistent_properties_ready_prop:s0
+ 
+diff --git a/prebuilts/api/33.0/private/property_contexts b/prebuilts/api/33.0/private/property_contexts
+index b00067e2be01a7658febaf0e45fcddfbc09ce9ad..2bc6ed6e078393767d21eac3d02ec9dbe68c9ee9 100644
+--- a/prebuilts/api/33.0/private/property_contexts
++++ b/prebuilts/api/33.0/private/property_contexts
+@@ -144,6 +144,7 @@ ro.crypto.              u:object_r:vold_prop:s0
+ # ro.build.fingerprint is either set in /system/build.prop, or is
+ # set at runtime by system_server.
+ ro.build.fingerprint    u:object_r:fingerprint_prop:s0 exact string
++ro.build.stock_fingerprint    u:object_r:fingerprint_prop:s0 exact string
+ 
+ ro.persistent_properties.ready  u:object_r:persistent_properties_ready_prop:s0
+ 
+diff --git a/private/property_contexts b/private/property_contexts
+index b00067e2be01a7658febaf0e45fcddfbc09ce9ad..2bc6ed6e078393767d21eac3d02ec9dbe68c9ee9 100644
+--- a/private/property_contexts
++++ b/private/property_contexts
+@@ -144,6 +144,7 @@ ro.crypto.              u:object_r:vold_prop:s0
+ # ro.build.fingerprint is either set in /system/build.prop, or is
+ # set at runtime by system_server.
+ ro.build.fingerprint    u:object_r:fingerprint_prop:s0 exact string
++ro.build.stock_fingerprint    u:object_r:fingerprint_prop:s0 exact string
+ 
+ ro.persistent_properties.ready  u:object_r:persistent_properties_ready_prop:s0
+ 

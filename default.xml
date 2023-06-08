@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+
+  <remote name="diamondaosp"
+          fetch="ssh://git@github.com/DiamondAOSP/"
+          revision="refs/heads/13" />
+
+  <include name="GrapheneOS/default.xml" />
+
+  <project path="tools/patcher" name="patcher" remote="diamondaosp">
+    <linkfile src="patcher.py" dest="patcher" />
+  </project>
+
+  <project path="external/KernelSU" name="platform_external_KernelSU" remote="diamondaosp" clone-depth="1" />
+
+  <remove-project name="kernel/prebuilts/5.15/x86-64" />
+  <project path="kernel/prebuilts/5.15/x86_64"
+           name="kernel_prebuilts_5.15_x86-64"
+           groups="pdk" clone-depth="1" remote="diamondaosp" />
+  <remove-project name="kernel/prebuilts/common-modules/virtual-device/5.15/x86-64" />
+  <project path="kernel/prebuilts/common-modules/virtual-device/5.15/x86-64"
+           name="kernel_prebuilts_common-modules_virtual-device_5.15_x86-64"
+           groups="pdk" clone-depth="1" remote="diamondaosp" />
+
+  <remove-project name="device_google_redbull-kernel" />
+  <project path="device/google/redbull-kernel" name="device_google_redbull-kernel"
+           groups="device,bramble,redfin" clone-depth="1" remote="diamondaosp" />
+
+</manifest>

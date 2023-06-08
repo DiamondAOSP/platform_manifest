@@ -1,0 +1,19 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: js6pak <me@6pak.dev>
+Date: Sun, 23 Jul 2023 01:33:56 +0200
+Subject: [PATCH] Don't sign KernelSU.apk
+
+Feature: kernelsu
+
+diff --git a/release.sh b/release.sh
+index 4d8fad8d8508b6c8c99861ef8635a9e51d72d00e..4dda753f7ba727458e3b206461739285442d1a12 100755
+--- a/release.sh
++++ b/release.sh
+@@ -148,6 +148,7 @@ sign_target_files_apks -o -d "$KEY_DIR" --avb_vbmeta_key "$KEY_DIR/avb.pem" --av
+     --extra_apex_payload_key com.android.wifi.apex="$KEY_DIR/avb.pem" \
+     --extra_apks com.google.pixel.camera.hal.apex="$KEY_DIR/releasekey" \
+     --extra_apex_payload_key com.google.pixel.camera.hal.apex="$KEY_DIR/avb.pem" \
++    --extra_apks KernelSU.apk="" \
+     "$OUT/obj/PACKAGING/target_files_intermediates/$TARGET_FILES" $TARGET_FILES
+ 
+ ota_from_target_files -k "$KEY_DIR/releasekey" "${EXTRA_OTA[@]}" $TARGET_FILES \

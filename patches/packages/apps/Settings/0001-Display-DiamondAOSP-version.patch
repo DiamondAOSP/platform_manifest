@@ -1,0 +1,73 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: js6pak <me@6pak.dev>
+Date: Thu, 8 Jun 2023 03:45:37 +0200
+Subject: [PATCH] Display DiamondAOSP version
+
+Feature: rebrand
+
+diff --git a/res/values/strings.xml b/res/values/strings.xml
+index efbfb63b27845912d42c101ef4c653234d49c386..2a55c37d6ddeb9e4a8e46c2d89011a3c871670ad 100644
+--- a/res/values/strings.xml
++++ b/res/values/strings.xml
+@@ -3598,6 +3598,8 @@
+     <!-- About phone screen, status item label  [CHAR LIMIT=60] -->
+     <string name="security_patch">Android security update</string>
+     <!-- About phone screen, status item label  [CHAR LIMIT=40] -->
++    <string name="diamondaosp_version">DiamondAOSP version</string>
++    <!-- About phone screen, status item label  [CHAR LIMIT=40] -->
+     <string name="model_info">Model</string>
+     <!-- Label for device's hardware revision value [CHAR LIMIT=40] -->
+     <string name="hardware_revision">Hardware version</string>
+diff --git a/res/xml/firmware_version.xml b/res/xml/firmware_version.xml
+index cf9779a69882c4e9fda82a10dc1295a808fa0595..6fcd470eb509b8dfd980fe76144b87cd9d40664c 100644
+--- a/res/xml/firmware_version.xml
++++ b/res/xml/firmware_version.xml
+@@ -37,6 +37,15 @@
+         settings:enableCopying="true"
+         settings:controller="com.android.settings.deviceinfo.firmwareversion.SecurityPatchLevelPreferenceController"/>
+ 
++    <!-- DiamondAOSP version -->
++    <Preference
++        android:key="diamondaosp_version"
++        android:title="@string/diamondaosp_version"
++        android:summary="@string/summary_placeholder"
++        settings:enableCopying="true"
++        settings:searchable="false"
++        settings:controller="com.android.settings.deviceinfo.firmwareversion.DiamondAospVersionPreferenceController"/>
++
+     <!-- Baseband -->
+     <Preference
+         android:key="base_band"
+diff --git a/src/com/android/settings/deviceinfo/firmwareversion/DiamondAospVersionPreferenceController.java b/src/com/android/settings/deviceinfo/firmwareversion/DiamondAospVersionPreferenceController.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..f88b580211a281f966eb28d9291f720f9599d791
+--- /dev/null
++++ b/src/com/android/settings/deviceinfo/firmwareversion/DiamondAospVersionPreferenceController.java
+@@ -0,0 +1,27 @@
++package com.android.settings.deviceinfo.firmwareversion;
++
++import android.content.Context;
++import android.os.SystemProperties;
++
++import com.android.settings.R;
++import com.android.settings.core.BasePreferenceController;
++
++public class DiamondAospVersionPreferenceController extends BasePreferenceController {
++
++    static final String DIAMONDAOSP_VERSION_PROPERTY = "ro.diamondaosp.version";
++
++    public DiamondAospVersionPreferenceController(Context context, String preferenceKey) {
++        super(context, preferenceKey);
++    }
++
++    @Override
++    public int getAvailabilityStatus() {
++        return AVAILABLE;
++    }
++
++    @Override
++    public CharSequence getSummary() {
++        return SystemProperties.get(DIAMONDAOSP_VERSION_PROPERTY,
++                mContext.getString(R.string.unknown));
++    }
++}

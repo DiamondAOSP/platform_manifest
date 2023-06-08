@@ -1,0 +1,339 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: js6pak <me@6pak.dev>
+Date: Fri, 23 Jun 2023 15:49:02 +0200
+Subject: [PATCH] Revert "Update controls panel layout according to the design"
+
+This reverts commit 97b29980
+
+Feature: full-power-menu
+
+diff --git a/packages/SystemUI/res/drawable/controls_panel_background.xml b/packages/SystemUI/res/drawable/controls_panel_background.xml
+index fc108a5e1e067c55b6e02263524594d9a58fa361..9092877fc6faf249ebaa35d15d52202755d85aa2 100644
+--- a/packages/SystemUI/res/drawable/controls_panel_background.xml
++++ b/packages/SystemUI/res/drawable/controls_panel_background.xml
+@@ -18,5 +18,5 @@
+ 
+ <shape xmlns:android="http://schemas.android.com/apk/res/android">
+     <solid android:color="#1F1F1F" />
+-    <corners android:radius="@dimen/controls_panel_corner_radius" />
++    <corners android:radius="@dimen/notification_corner_radius" />
+ </shape>
+\ No newline at end of file
+diff --git a/packages/SystemUI/res/layout/controls_fullscreen.xml b/packages/SystemUI/res/layout/controls_fullscreen.xml
+index fa703038cc7e59d0f081c427f6a099cf6c516f67..e08e63b39e59a7d8c36868e5ca726f494bb89e03 100644
+--- a/packages/SystemUI/res/layout/controls_fullscreen.xml
++++ b/packages/SystemUI/res/layout/controls_fullscreen.xml
+@@ -15,11 +15,19 @@
+      limitations under the License.
+ -->
+ 
+-<LinearLayout
++<FrameLayout
+     xmlns:android="http://schemas.android.com/apk/res/android"
+     android:id="@+id/control_detail_root"
+     android:layout_width="match_parent"
+     android:layout_height="match_parent"
+     android:orientation="vertical">
+ 
+-</LinearLayout>
++
++    <LinearLayout
++        android:id="@+id/global_actions_controls"
++        android:layout_width="match_parent"
++        android:layout_height="match_parent"
++        android:orientation="vertical"
++        android:paddingHorizontal="@dimen/controls_padding_horizontal" />
++
++</FrameLayout>
+diff --git a/packages/SystemUI/res/layout/controls_with_favorites.xml b/packages/SystemUI/res/layout/controls_with_favorites.xml
+index 71561c07ebd3a3b1ae44a18416a0fe1b4845fbfe..aa211bf8cfdc8f57162ec3338ffd4a576b98437f 100644
+--- a/packages/SystemUI/res/layout/controls_with_favorites.xml
++++ b/packages/SystemUI/res/layout/controls_with_favorites.xml
+@@ -13,94 +13,82 @@
+   ~ See the License for the specific language governing permissions and
+   ~ limitations under the License.
+   -->
+-<merge xmlns:android="http://schemas.android.com/apk/res/android"
+-    xmlns:tools="http://schemas.android.com/tools"
+-    tools:orientation="vertical"
+-    tools:parentTag="android.widget.LinearLayout">
++<merge
++    xmlns:android="http://schemas.android.com/apk/res/android">
+ 
+-    <LinearLayout
+-        android:layout_width="match_parent"
+-        android:layout_height="wrap_content"
+-        android:paddingHorizontal="@dimen/controls_header_horizontal_padding"
+-        android:layout_marginBottom="@dimen/controls_header_bottom_margin"
+-        android:orientation="horizontal">
+-
+-        <!-- make sure the header stays centered in the layout by adding a spacer -->
+-        <Space
+-            android:id="@+id/controls_spacer"
+-            android:layout_width="@dimen/controls_header_menu_button_size"
+-            android:layout_height="1dp"
+-            android:visibility="gone" />
++  <LinearLayout
++      android:layout_width="match_parent"
++      android:layout_height="wrap_content"
++      android:orientation="horizontal"
++      android:layout_marginBottom="@dimen/controls_header_bottom_margin">
+ 
+-        <ImageView
+-            android:id="@+id/controls_close"
+-            android:layout_width="@dimen/controls_header_menu_button_size"
+-            android:layout_height="@dimen/controls_header_menu_button_size"
+-            android:layout_gravity="center_vertical"
+-            android:background="?android:attr/selectableItemBackgroundBorderless"
+-            android:contentDescription="@string/accessibility_desc_close"
+-            android:padding="12dp"
+-            android:src="@drawable/ic_close"
+-            android:tint="@color/control_primary_text"
+-            android:visibility="gone"
+-            tools:visibility="visible" />
++    <!-- make sure the header stays centered in the layout by adding a spacer -->
++    <Space
++        android:id="@+id/controls_spacer"
++        android:layout_width="@dimen/controls_header_menu_size"
++        android:layout_height="1dp"
++        android:visibility="gone" />
+ 
+-        <!-- need to keep this outer view in order to have a correctly sized anchor
+-             for the dropdown menu, as well as dropdown background in the right place -->
+-        <LinearLayout
+-            android:id="@+id/controls_header"
+-            android:layout_width="0dp"
+-            android:layout_height="wrap_content"
+-            android:layout_gravity="center"
+-            android:layout_weight="1"
+-            android:gravity="center"
+-            android:minHeight="48dp"
+-            android:orientation="horizontal">
+-
+-            <TextView
+-                android:id="@+id/app_or_structure_spinner"
+-                style="@style/Control.Spinner.Header"
+-                android:layout_width="wrap_content"
+-                android:layout_height="wrap_content"
+-                android:layout_gravity="center"
+-                android:clickable="false"
+-                tools:text="Test app" />
+-        </LinearLayout>
+-
+-        <ImageView
+-            android:id="@+id/controls_more"
+-            android:layout_width="@dimen/controls_header_menu_button_size"
+-            android:layout_height="@dimen/controls_header_menu_button_size"
+-            android:layout_gravity="center_vertical"
+-            android:background="?android:attr/selectableItemBackgroundBorderless"
+-            android:contentDescription="@string/accessibility_menu"
+-            android:padding="12dp"
+-            android:src="@drawable/ic_more_vert"
+-            android:tint="@color/control_more_vert" />
++    <ImageView
++        android:id="@+id/controls_close"
++        android:contentDescription="@string/accessibility_desc_close"
++        android:src="@drawable/ic_close"
++        android:background="?android:attr/selectableItemBackgroundBorderless"
++        android:tint="@color/control_primary_text"
++        android:layout_width="@dimen/controls_header_menu_size"
++        android:layout_height="@dimen/controls_header_menu_size"
++        android:padding="12dp"
++        android:visibility="gone" />
++    <!-- need to keep this outer view in order to have a correctly sized anchor
++         for the dropdown menu, as well as dropdown background in the right place -->
++    <LinearLayout
++        android:id="@+id/controls_header"
++        android:orientation="horizontal"
++        android:layout_width="0dp"
++        android:layout_weight="1"
++        android:minHeight="48dp"
++        android:layout_height="wrap_content"
++        android:layout_gravity="center"
++        android:gravity="center">
++      <TextView
++          style="@style/Control.Spinner.Header"
++          android:clickable="false"
++          android:id="@+id/app_or_structure_spinner"
++          android:layout_width="wrap_content"
++          android:layout_height="wrap_content"
++          android:layout_gravity="center" />
+     </LinearLayout>
++    <ImageView
++        android:id="@+id/controls_more"
++        android:src="@drawable/ic_more_vert"
++        android:layout_width="@dimen/controls_header_menu_size"
++        android:layout_height="@dimen/controls_header_menu_size"
++        android:padding="12dp"
++        android:tint="@color/control_more_vert"
++        android:layout_gravity="center"
++        android:contentDescription="@string/accessibility_menu"
++        android:background="?android:attr/selectableItemBackgroundBorderless" />
++  </LinearLayout>
+ 
+-    <ScrollView
++  <ScrollView
+         android:id="@+id/controls_scroll_view"
+         android:layout_width="match_parent"
+         android:layout_height="0dp"
+-        android:layout_marginHorizontal="@dimen/controls_content_margin_horizontal"
+         android:layout_weight="1"
+-        android:clipChildren="true"
+         android:orientation="vertical"
++        android:clipChildren="true"
+         android:paddingHorizontal="16dp"
+         android:scrollbars="none">
++    <include layout="@layout/global_actions_controls_list_view" />
+ 
+-        <include layout="@layout/global_actions_controls_list_view" />
+-
+-    </ScrollView>
++  </ScrollView>
+ 
+-    <FrameLayout
+-        android:id="@+id/controls_panel"
+-        android:layout_width="match_parent"
+-        android:layout_height="0dp"
+-        android:layout_marginHorizontal="@dimen/controls_content_margin_horizontal"
+-        android:layout_weight="1"
+-        android:background="@drawable/controls_panel_background"
+-        android:visibility="gone"
+-        tools:visibility="visible" />
++  <FrameLayout
++      android:id="@+id/controls_panel"
++      android:layout_width="match_parent"
++      android:layout_height="0dp"
++      android:layout_weight="1"
++      android:background="@drawable/controls_panel_background"
++      android:visibility="gone"
++      />
+ </merge>
+diff --git a/packages/SystemUI/res/values-land/dimens.xml b/packages/SystemUI/res/values-land/dimens.xml
+index 908aac4a7b7f788cba6e15944fed9e9a4bd0cac1..73867fd5238a1c9dd907db65efd5787c6fdb2f46 100644
+--- a/packages/SystemUI/res/values-land/dimens.xml
++++ b/packages/SystemUI/res/values-land/dimens.xml
+@@ -64,8 +64,7 @@
+ 
+     <dimen name="qs_panel_padding_top">@dimen/qqs_layout_margin_top</dimen>
+ 
+-    <dimen name="controls_header_horizontal_padding">12dp</dimen>
+-    <dimen name="controls_content_margin_horizontal">16dp</dimen>
++    <dimen name="controls_padding_horizontal">16dp</dimen>
+ 
+     <!-- Bouncer user switcher margins -->
+     <dimen name="bouncer_user_switcher_view_mode_user_switcher_bottom_margin">0dp</dimen>
+diff --git a/packages/SystemUI/res/values-sw600dp/dimens.xml b/packages/SystemUI/res/values-sw600dp/dimens.xml
+index 59becc69506c0cc24108047866ecaab9741edae2..7cd147099e9c829a840e949a73f133f90ce625b4 100644
+--- a/packages/SystemUI/res/values-sw600dp/dimens.xml
++++ b/packages/SystemUI/res/values-sw600dp/dimens.xml
+@@ -87,7 +87,4 @@
+ 
+     <!-- Biometric Auth pattern view size, better to align keyguard_security_width -->
+     <dimen name="biometric_auth_pattern_view_size">348dp</dimen>
+-
+-    <dimen name="controls_header_horizontal_padding">12dp</dimen>
+-    <dimen name="controls_content_margin_horizontal">24dp</dimen>
+ </resources>
+diff --git a/packages/SystemUI/res/values-sw720dp-land/dimens.xml b/packages/SystemUI/res/values-sw720dp-land/dimens.xml
+index 8583f0549960410560bbd7714f06c21a30138d18..9ed936050aa24806697613d4e91cfc59522f6c5a 100644
+--- a/packages/SystemUI/res/values-sw720dp-land/dimens.xml
++++ b/packages/SystemUI/res/values-sw720dp-land/dimens.xml
+@@ -37,8 +37,6 @@
+     <dimen name="qs_media_rec_album_size">112dp</dimen>
+     <dimen name="qs_media_rec_album_side_margin">16dp</dimen>
+ 
+-    <dimen name="controls_panel_corner_radius">40dp</dimen>
+-
+     <dimen name="lockscreen_shade_max_over_scroll_amount">42dp</dimen>
+ 
+     <!-- Roughly the same distance as media on LS to media on QS. We will translate by this value
+diff --git a/packages/SystemUI/res/values-sw720dp-port/dimens.xml b/packages/SystemUI/res/values-sw720dp-port/dimens.xml
+index 9248d585bba7f77fc81073d6ed4f79f49caf5375..8b41a44b9ba3b1608926d645da2c808d2f836487 100644
+--- a/packages/SystemUI/res/values-sw720dp-port/dimens.xml
++++ b/packages/SystemUI/res/values-sw720dp-port/dimens.xml
+@@ -33,7 +33,5 @@
+      side -->
+     <dimen name="qs_tiles_page_horizontal_margin">60dp</dimen>
+ 
+-    <dimen name="controls_panel_corner_radius">46dp</dimen>
+-
+     <dimen name="notification_section_divider_height">16dp</dimen>
+ </resources>
+diff --git a/packages/SystemUI/res/values-sw720dp/dimens.xml b/packages/SystemUI/res/values-sw720dp/dimens.xml
+index 20864591ae5a6fa1b2d717e9ae5c05d516744ad1..8f59df655c3ad4276312343ace2a21ede8f2ce23 100644
+--- a/packages/SystemUI/res/values-sw720dp/dimens.xml
++++ b/packages/SystemUI/res/values-sw720dp/dimens.xml
+@@ -19,8 +19,7 @@
+     <!-- gap on either side of status bar notification icons -->
+     <dimen name="status_bar_icon_padding">1dp</dimen>
+ 
+-    <dimen name="controls_header_horizontal_padding">28dp</dimen>
+-    <dimen name="controls_content_margin_horizontal">40dp</dimen>
++    <dimen name="controls_padding_horizontal">40dp</dimen>
+ 
+     <dimen name="large_screen_shade_header_height">56dp</dimen>
+ 
+diff --git a/packages/SystemUI/res/values/dimens.xml b/packages/SystemUI/res/values/dimens.xml
+index 508a3bd7515a421b7befb31e4d499cbdb28d4374..9aa8a2d2a02894c7f89d51bbf7338891ff82d4cd 100644
+--- a/packages/SystemUI/res/values/dimens.xml
++++ b/packages/SystemUI/res/values/dimens.xml
+@@ -1166,13 +1166,11 @@
+ 
+     <!-- Home Controls -->
+     <dimen name="controls_header_menu_size">48dp</dimen>
+-    <dimen name="controls_header_menu_button_size">48dp</dimen>
+     <dimen name="controls_header_bottom_margin">16dp</dimen>
+-    <dimen name="controls_header_horizontal_padding">12dp</dimen>
+     <dimen name="controls_header_app_icon_size">24dp</dimen>
+     <dimen name="controls_top_margin">48dp</dimen>
+-    <dimen name="controls_content_margin_horizontal">0dp</dimen>
+-    <dimen name="control_header_text_size">24sp</dimen>
++    <dimen name="controls_padding_horizontal">0dp</dimen>
++    <dimen name="control_header_text_size">20sp</dimen>
+     <dimen name="control_item_text_size">16sp</dimen>
+     <dimen name="control_menu_item_text_size">16sp</dimen>
+     <dimen name="control_menu_item_min_height">56dp</dimen>
+@@ -1203,8 +1201,6 @@
+     <item name="controls_task_view_width_percentage" translatable="false" format="float" type="dimen">1.0</item>
+     <dimen name="controls_task_view_right_margin">0dp</dimen>
+ 
+-    <dimen name="controls_panel_corner_radius">42dp</dimen>
+-
+     <!-- Home Controls activity view detail panel-->
+     <dimen name="controls_activity_view_corner_radius">@*android:dimen/config_bottomDialogCornerRadius</dimen>
+ 
+diff --git a/packages/SystemUI/src/com/android/systemui/controls/ui/ControlsActivity.kt b/packages/SystemUI/src/com/android/systemui/controls/ui/ControlsActivity.kt
+index c964b9654955f35601acd52c54013d24c0da5791..f00ef90ec128655748f4fdd4c66c9c6ce9db5da0 100644
+--- a/packages/SystemUI/src/com/android/systemui/controls/ui/ControlsActivity.kt
++++ b/packages/SystemUI/src/com/android/systemui/controls/ui/ControlsActivity.kt
+@@ -73,7 +73,7 @@ open class ControlsActivity @Inject constructor(
+ 
+         getLifecycle().addObserver(
+             ControlsAnimations.observerForAnimations(
+-                requireViewById(R.id.control_detail_root),
++                requireViewById<ViewGroup>(R.id.control_detail_root),
+                 window,
+                 intent,
+                 !featureFlags.isEnabled(Flags.USE_APP_PANELS)
+@@ -111,7 +111,7 @@ open class ControlsActivity @Inject constructor(
+     override fun onStart() {
+         super.onStart()
+ 
+-        parent = requireViewById(R.id.control_detail_root)
++        parent = requireViewById<ViewGroup>(R.id.global_actions_controls)
+         parent.alpha = 0f
+         if (featureFlags.isEnabled(Flags.USE_APP_PANELS) && !keyguardStateController.isUnlocked) {
+             controlsSettingsDialogManager.maybeShowDialog(this) {
+diff --git a/packages/SystemUI/src/com/android/systemui/controls/ui/PanelTaskViewController.kt b/packages/SystemUI/src/com/android/systemui/controls/ui/PanelTaskViewController.kt
+index 1f89c917186ace3b9b80ab2f8a00bfcc62d91b0f..f0d71a70cb7728a68f190d664010b015b211f79a 100644
+--- a/packages/SystemUI/src/com/android/systemui/controls/ui/PanelTaskViewController.kt
++++ b/packages/SystemUI/src/com/android/systemui/controls/ui/PanelTaskViewController.kt
+@@ -71,7 +71,7 @@ class PanelTaskViewController(
+                 taskView.post {
+                     val roundedCorner =
+                         activityContext.resources.getDimensionPixelSize(
+-                            R.dimen.controls_panel_corner_radius
++                            R.dimen.notification_corner_radius
+                         )
+                     val radii = FloatArray(8) { roundedCorner.toFloat() }
+                     taskView.background =

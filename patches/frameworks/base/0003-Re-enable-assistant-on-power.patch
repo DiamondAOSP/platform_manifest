@@ -1,0 +1,20 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: js6pak <me@6pak.dev>
+Date: Thu, 22 Jun 2023 17:23:07 +0200
+Subject: [PATCH] Re-enable assistant on power
+
+I hate this but aa requested it
+
+diff --git a/core/res/res/values/config.xml b/core/res/res/values/config.xml
+index 6b0ede33f06d96a04098200979e96780e51f9a4c..6bff78abe46e3c2f23350a787617390ec276bdd9 100644
+--- a/core/res/res/values/config.xml
++++ b/core/res/res/values/config.xml
+@@ -1101,7 +1101,7 @@
+     <!-- Whether the setting to change long press on power behaviour from default to assistant (5)
+          is available in Settings.
+      -->
+-    <bool name="config_longPressOnPowerForAssistantSettingAvailable">false</bool>
++    <bool name="config_longPressOnPowerForAssistantSettingAvailable">true</bool>
+ 
+     <!-- Control the behavior when the user long presses the power button for a long time.
+             0 - Nothing

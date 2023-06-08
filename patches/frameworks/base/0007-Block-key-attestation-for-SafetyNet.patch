@@ -1,0 +1,76 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: js6pak <me@6pak.dev>
+Date: Sun, 23 Jul 2023 15:32:39 +0200
+Subject: [PATCH] Block key attestation for SafetyNet
+
+Based on ProtonAOSP: https://github.com/ProtonAOSP/android_frameworks_base/blob/55fb1a318b1f725fa7d366b75a0253f0afe284e5/core/java/com/android/internal/gmscompat/AttestationHooks.java
+Feature: safetynet
+
+diff --git a/core/java/com/android/internal/gmscompat/AttestationHooks.java b/core/java/com/android/internal/gmscompat/AttestationHooks.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..fe07856cad407055bf7e5e4c934bd0f087d7f887
+--- /dev/null
++++ b/core/java/com/android/internal/gmscompat/AttestationHooks.java
+@@ -0,0 +1,40 @@
++/*
++ * Copyright (C) 2021 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.internal.gmscompat;
++
++import android.app.compat.gms.GmsCompat;
++import android.util.Log;
++
++import java.util.Arrays;
++
++/** @hide */
++public final class AttestationHooks {
++    private static final String TAG = "GmsCompat/Attestation";
++
++    private static boolean isCallerSafetyNet() {
++        return GmsCompat.isGmsCore() && Arrays.stream(Thread.currentThread().getStackTrace())
++                .anyMatch(elem -> elem.getClassName().contains("DroidGuard"));
++    }
++
++    public static void onEngineGetCertificateChain() {
++        // Check stack for DroidGuard
++        if (isCallerSafetyNet() || GmsCompat.isPlayStore()) {
++            Log.i(TAG, "Blocked key attestation");
++            throw new UnsupportedOperationException();
++        }
++    }
++}
+\ No newline at end of file
+diff --git a/keystore/java/android/security/keystore2/AndroidKeyStoreSpi.java b/keystore/java/android/security/keystore2/AndroidKeyStoreSpi.java
+index 33411e1ec5b970b21451d6f64bc66a310cffd37b..133a4094d4341c8bfccc806bafa93a5dfbcd3902 100644
+--- a/keystore/java/android/security/keystore2/AndroidKeyStoreSpi.java
++++ b/keystore/java/android/security/keystore2/AndroidKeyStoreSpi.java
+@@ -42,6 +42,7 @@ import android.system.keystore2.ResponseCode;
+ import android.util.Log;
+ 
+ import com.android.internal.annotations.VisibleForTesting;
++import com.android.internal.gmscompat.AttestationHooks;
+ 
+ import java.io.ByteArrayInputStream;
+ import java.io.IOException;
+@@ -164,6 +165,8 @@ public class AndroidKeyStoreSpi extends KeyStoreSpi {
+ 
+     @Override
+     public Certificate[] engineGetCertificateChain(String alias) {
++        AttestationHooks.onEngineGetCertificateChain();
++
+         KeyEntryResponse response = getKeyMetadata(alias);
+ 
+         if (response == null || response.metadata.certificate == null) {

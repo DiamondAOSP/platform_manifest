@@ -1,0 +1,20 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: js6pak <me@6pak.dev>
+Date: Sat, 24 Jun 2023 03:31:39 +0200
+Subject: [PATCH] Add kernelsu module when WITH_KERNELSU is true
+
+Feature: kernelsu
+
+diff --git a/BoardConfig-common.mk b/BoardConfig-common.mk
+index 9d906a76e580595f957548e6ddc5fd5fc5ba6f7b..2ef12ea17ba775bd30aef9ea7387138931b35455 100644
+--- a/BoardConfig-common.mk
++++ b/BoardConfig-common.mk
+@@ -604,3 +604,8 @@ BOARD_BUILD_VENDOR_RAMDISK_IMAGE := true
+ 
+ # Testing related defines
+ BOARD_PERFSETUP_SCRIPT := platform_testing/scripts/perf-setup/b5r3-setup.sh
++
++ifeq ($(WITH_KERNELSU),true)
++BOARD_VENDOR_RAMDISK_KERNEL_MODULES += $(TARGET_KERNEL_DIR)/kernelsu/kernelsu.ko
++BOARD_VENDOR_RAMDISK_KERNEL_MODULES_LOAD += $(TARGET_KERNEL_DIR)/kernelsu/kernelsu.ko
++endif

@@ -1,0 +1,1089 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: js6pak <me@6pak.dev>
+Date: Fri, 28 Jul 2023 21:26:04 +0200
+Subject: [PATCH] Trace JNI calls made by SafetyNet
+
+Feature: safetynet
+
+diff --git a/runtime/jni/jni_internal.cc b/runtime/jni/jni_internal.cc
+index e3153fdacea86909aa566da557c5e5d2240748c9..56e78895cf49940ecfde7245e0b012f9581fe518 100644
+--- a/runtime/jni/jni_internal.cc
++++ b/runtime/jni/jni_internal.cc
+@@ -511,6 +511,7 @@ ArtMethod* FindMethodJNI(const ScopedObjectAccess& soa,
+     ThrowNoSuchMethodError(soa, c, name, sig, is_static ? "static" : "non-static");
+     return nullptr;
+   }
++  LOG_TRACEJNI << "FindMethodJNI: " << ArtMethod::PrettyMethod(method);
+   return method;
+ }
+ 
+@@ -567,6 +568,7 @@ ArtField* FindFieldJNI(const ScopedObjectAccess& soa,
+                                    sig, name, c->GetDescriptor(&temp));
+     return nullptr;
+   }
++  LOG_TRACEJNI << "FindFieldJNI: " << ArtField::PrettyField(field);
+   return field;
+ }
+ 
+@@ -658,16 +660,19 @@ template <bool kEnableIndexIds>
+ class JNI {
+  public:
+   static jint GetVersion(JNIEnv*) {
++    LOG_TRACEJNI << "GetVersion";
+     return JNI_VERSION_1_6;
+   }
+ 
+   static jclass DefineClass(JNIEnv*, const char*, jobject, const jbyte*, jsize) {
++    LOG_TRACEJNI << "DefineClass";
+     LOG(WARNING) << "JNI DefineClass is not supported";
+     return nullptr;
+   }
+ 
+   static jclass FindClass(JNIEnv* env, const char* name) {
+     CHECK_NON_NULL_ARGUMENT(name);
++    LOG_TRACEJNI << "FindClass: " << name;
+     Runtime* runtime = Runtime::Current();
+     ClassLinker* class_linker = runtime->GetClassLinker();
+     std::string descriptor(NormalizeJniClassDescriptor(name));
+@@ -686,7 +691,9 @@ class JNI {
+   static jmethodID FromReflectedMethod(JNIEnv* env, jobject jlr_method) {
+     CHECK_NON_NULL_ARGUMENT(jlr_method);
+     ScopedObjectAccess soa(env);
+-    return jni::EncodeArtMethod<kEnableIndexIds>(ArtMethod::FromReflectedMethod(soa, jlr_method));
++    auto art_method = ArtMethod::FromReflectedMethod(soa, jlr_method);
++    LOG_TRACEJNI << "FromReflectedMethod: " << ArtMethod::PrettyMethod(art_method);
++    return jni::EncodeArtMethod<kEnableIndexIds>(art_method);
+   }
+ 
+   static jfieldID FromReflectedField(JNIEnv* env, jobject jlr_field) {
+@@ -698,13 +705,16 @@ class JNI {
+       return nullptr;
+     }
+     ObjPtr<mirror::Field> field = ObjPtr<mirror::Field>::DownCast(obj_field);
+-    return jni::EncodeArtField<kEnableIndexIds>(field->GetArtField());
++    auto art_field = field->GetArtField();
++    LOG_TRACEJNI << "FromReflectedField: " << ArtField::PrettyField(art_field);
++    return jni::EncodeArtField<kEnableIndexIds>(art_field);
+   }
+ 
+   static jobject ToReflectedMethod(JNIEnv* env, jclass, jmethodID mid, jboolean) {
+     CHECK_NON_NULL_ARGUMENT(mid);
+     ScopedObjectAccess soa(env);
+     ArtMethod* m = jni::DecodeArtMethod(mid);
++    LOG_TRACEJNI << "ToReflectedMethod: " << ArtMethod::PrettyMethod(m);
+     ObjPtr<mirror::Executable> method;
+     DCHECK_EQ(Runtime::Current()->GetClassLinker()->GetImagePointerSize(), kRuntimePointerSize);
+     if (m->IsConstructor()) {
+@@ -719,6 +729,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT(fid);
+     ScopedObjectAccess soa(env);
+     ArtField* f = jni::DecodeArtField(fid);
++    LOG_TRACEJNI << "ToReflectedField: " << ArtField::PrettyField(f);
+     return soa.AddLocalReference<jobject>(
+         mirror::Field::CreateFromArtField(soa.Self(), f, true));
+   }
+@@ -764,6 +775,7 @@ class JNI {
+   static jint Throw(JNIEnv* env, jthrowable java_exception) {
+     ScopedObjectAccess soa(env);
+     ObjPtr<mirror::Throwable> exception = soa.Decode<mirror::Throwable>(java_exception);
++    LOG_TRACEJNI << "Throw: " << mirror::Object::PrettyTypeOf(exception);
+     if (exception == nullptr) {
+       return JNI_ERR;
+     }
+@@ -945,6 +957,7 @@ class JNI {
+     ScopedObjectAccess soa(env);
+     ObjPtr<mirror::Class> c = EnsureInitialized(soa.Self(),
+                                                 soa.Decode<mirror::Class>(java_class));
++    LOG_TRACEJNI << "NewObjectV: " << mirror::Class::PrettyDescriptor(c);
+     if (c == nullptr) {
+       return nullptr;
+     }
+@@ -972,6 +985,7 @@ class JNI {
+     ScopedObjectAccess soa(env);
+     ObjPtr<mirror::Class> c = EnsureInitialized(soa.Self(),
+                                                 soa.Decode<mirror::Class>(java_class));
++    LOG_TRACEJNI << "NewObjectA: " << mirror::Class::PrettyDescriptor(c);
+     if (c == nullptr) {
+       return nullptr;
+     }
+@@ -1017,6 +1031,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT(obj);
+     CHECK_NON_NULL_ARGUMENT(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallObjectMethod: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     JValue result(InvokeVirtualOrInterfaceWithVarArgs(soa, obj, mid, ap));
+     return soa.AddLocalReference<jobject>(result.GetL());
+   }
+@@ -1025,6 +1040,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT(obj);
+     CHECK_NON_NULL_ARGUMENT(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallObjectMethodV: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     JValue result(InvokeVirtualOrInterfaceWithVarArgs(soa, obj, mid, args));
+     return soa.AddLocalReference<jobject>(result.GetL());
+   }
+@@ -1033,6 +1049,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT(obj);
+     CHECK_NON_NULL_ARGUMENT(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallObjectMethodA: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     JValue result(InvokeVirtualOrInterfaceWithJValues(soa, obj, mid, args));
+     return soa.AddLocalReference<jobject>(result.GetL());
+   }
+@@ -1044,6 +1061,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallBooleanMethod: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     JValue result(InvokeVirtualOrInterfaceWithVarArgs(soa, obj, mid, ap));
+     return result.GetZ();
+   }
+@@ -1052,6 +1070,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallBooleanMethodV: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeVirtualOrInterfaceWithVarArgs(soa, obj, mid, args).GetZ();
+   }
+ 
+@@ -1059,6 +1078,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallBooleanMethodA: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeVirtualOrInterfaceWithJValues(soa, obj, mid, args).GetZ();
+   }
+ 
+@@ -1069,6 +1089,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallByteMethod: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     JValue result(InvokeVirtualOrInterfaceWithVarArgs(soa, obj, mid, ap));
+     return result.GetB();
+   }
+@@ -1077,6 +1098,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallByteMethodV: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeVirtualOrInterfaceWithVarArgs(soa, obj, mid, args).GetB();
+   }
+ 
+@@ -1084,6 +1106,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallByteMethodA: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeVirtualOrInterfaceWithJValues(soa, obj, mid, args).GetB();
+   }
+ 
+@@ -1094,6 +1117,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallCharMethod: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     JValue result(InvokeVirtualOrInterfaceWithVarArgs(soa, obj, mid, ap));
+     return result.GetC();
+   }
+@@ -1102,6 +1126,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallCharMethodV: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeVirtualOrInterfaceWithVarArgs(soa, obj, mid, args).GetC();
+   }
+ 
+@@ -1109,6 +1134,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallCharMethodA: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeVirtualOrInterfaceWithJValues(soa, obj, mid, args).GetC();
+   }
+ 
+@@ -1119,6 +1145,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallDoubleMethod: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     JValue result(InvokeVirtualOrInterfaceWithVarArgs(soa, obj, mid, ap));
+     return result.GetD();
+   }
+@@ -1127,6 +1154,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallDoubleMethodV: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeVirtualOrInterfaceWithVarArgs(soa, obj, mid, args).GetD();
+   }
+ 
+@@ -1134,6 +1162,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallDoubleMethodA: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeVirtualOrInterfaceWithJValues(soa, obj, mid, args).GetD();
+   }
+ 
+@@ -1144,6 +1173,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallFloatMethod: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     JValue result(InvokeVirtualOrInterfaceWithVarArgs(soa, obj, mid, ap));
+     return result.GetF();
+   }
+@@ -1152,6 +1182,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallFloatMethodV: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeVirtualOrInterfaceWithVarArgs(soa, obj, mid, args).GetF();
+   }
+ 
+@@ -1159,6 +1190,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallFloatMethodA: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeVirtualOrInterfaceWithJValues(soa, obj, mid, args).GetF();
+   }
+ 
+@@ -1169,6 +1201,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallIntMethod: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     JValue result(InvokeVirtualOrInterfaceWithVarArgs(soa, obj, mid, ap));
+     return result.GetI();
+   }
+@@ -1177,6 +1210,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallIntMethodV: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeVirtualOrInterfaceWithVarArgs(soa, obj, mid, args).GetI();
+   }
+ 
+@@ -1184,6 +1218,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallIntMethodA: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeVirtualOrInterfaceWithJValues(soa, obj, mid, args).GetI();
+   }
+ 
+@@ -1194,6 +1229,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallLongMethod: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     JValue result(InvokeVirtualOrInterfaceWithVarArgs(soa, obj, mid, ap));
+     return result.GetJ();
+   }
+@@ -1202,6 +1238,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallLongMethodV: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeVirtualOrInterfaceWithVarArgs(soa, obj, mid, args).GetJ();
+   }
+ 
+@@ -1209,6 +1246,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallLongMethodA: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeVirtualOrInterfaceWithJValues(soa, obj, mid, args).GetJ();
+   }
+ 
+@@ -1219,6 +1257,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallShortMethod: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     JValue result(InvokeVirtualOrInterfaceWithVarArgs(soa, obj, mid, ap));
+     return result.GetS();
+   }
+@@ -1227,6 +1266,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallShortMethodV: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeVirtualOrInterfaceWithVarArgs(soa, obj, mid, args).GetS();
+   }
+ 
+@@ -1234,6 +1274,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallShortMethodA: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeVirtualOrInterfaceWithJValues(soa, obj, mid, args).GetS();
+   }
+ 
+@@ -1244,6 +1285,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_VOID(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_VOID(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallVoidMethod: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     InvokeVirtualOrInterfaceWithVarArgs(soa, obj, mid, ap);
+   }
+ 
+@@ -1251,6 +1293,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_VOID(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_VOID(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallVoidMethodV: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     InvokeVirtualOrInterfaceWithVarArgs(soa, obj, mid, args);
+   }
+ 
+@@ -1258,6 +1301,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_VOID(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_VOID(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallVoidMethodA: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     InvokeVirtualOrInterfaceWithJValues(soa, obj, mid, args);
+   }
+ 
+@@ -1268,6 +1312,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT(obj);
+     CHECK_NON_NULL_ARGUMENT(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallNonvirtualObjectMethod: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     JValue result(InvokeWithVarArgs(soa, obj, mid, ap));
+     jobject local_result = soa.AddLocalReference<jobject>(result.GetL());
+     return local_result;
+@@ -1278,6 +1323,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT(obj);
+     CHECK_NON_NULL_ARGUMENT(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallNonvirtualObjectMethodV: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     JValue result(InvokeWithVarArgs(soa, obj, mid, args));
+     return soa.AddLocalReference<jobject>(result.GetL());
+   }
+@@ -1287,6 +1333,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT(obj);
+     CHECK_NON_NULL_ARGUMENT(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallNonvirtualObjectMethodA: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     JValue result(InvokeWithJValues(soa, obj, mid, args));
+     return soa.AddLocalReference<jobject>(result.GetL());
+   }
+@@ -1299,6 +1346,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallNonvirtualBooleanMethod: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     JValue result(InvokeWithVarArgs(soa, obj, mid, ap));
+     return result.GetZ();
+   }
+@@ -1308,6 +1356,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallNonvirtualBooleanMethodV: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeWithVarArgs(soa, obj, mid, args).GetZ();
+   }
+ 
+@@ -1316,6 +1365,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallNonvirtualBooleanMethodA: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeWithJValues(soa, obj, mid, args).GetZ();
+   }
+ 
+@@ -1326,6 +1376,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallNonvirtualByteMethod: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     JValue result(InvokeWithVarArgs(soa, obj, mid, ap));
+     return result.GetB();
+   }
+@@ -1335,6 +1386,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallNonvirtualByteMethodV: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeWithVarArgs(soa, obj, mid, args).GetB();
+   }
+ 
+@@ -1343,6 +1395,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallNonvirtualByteMethodA: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeWithJValues(soa, obj, mid, args).GetB();
+   }
+ 
+@@ -1353,6 +1406,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallNonvirtualCharMethod: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     JValue result(InvokeWithVarArgs(soa, obj, mid, ap));
+     return result.GetC();
+   }
+@@ -1362,6 +1416,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallNonvirtualCharMethodV: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeWithVarArgs(soa, obj, mid, args).GetC();
+   }
+ 
+@@ -1370,6 +1425,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallNonvirtualCharMethodA: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeWithJValues(soa, obj, mid, args).GetC();
+   }
+ 
+@@ -1380,6 +1436,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallNonvirtualShortMethod: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     JValue result(InvokeWithVarArgs(soa, obj, mid, ap));
+     return result.GetS();
+   }
+@@ -1389,6 +1446,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallNonvirtualShortMethodV: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeWithVarArgs(soa, obj, mid, args).GetS();
+   }
+ 
+@@ -1397,6 +1455,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallNonvirtualShortMethodA: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeWithJValues(soa, obj, mid, args).GetS();
+   }
+ 
+@@ -1407,6 +1466,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallNonvirtualIntMethod: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     JValue result(InvokeWithVarArgs(soa, obj, mid, ap));
+     return result.GetI();
+   }
+@@ -1416,6 +1476,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallNonvirtualIntMethodV: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeWithVarArgs(soa, obj, mid, args).GetI();
+   }
+ 
+@@ -1424,6 +1485,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallNonvirtualIntMethodA: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeWithJValues(soa, obj, mid, args).GetI();
+   }
+ 
+@@ -1434,6 +1496,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallNonvirtualLongMethod: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     JValue result(InvokeWithVarArgs(soa, obj, mid, ap));
+     return result.GetJ();
+   }
+@@ -1443,6 +1506,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallNonvirtualLongMethodV: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeWithVarArgs(soa, obj, mid, args).GetJ();
+   }
+ 
+@@ -1451,6 +1515,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallNonvirtualLongMethodA: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeWithJValues(soa, obj, mid, args).GetJ();
+   }
+ 
+@@ -1461,6 +1526,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallNonvirtualFloatMethod: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     JValue result(InvokeWithVarArgs(soa, obj, mid, ap));
+     return result.GetF();
+   }
+@@ -1470,6 +1536,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallNonvirtualFloatMethodV: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeWithVarArgs(soa, obj, mid, args).GetF();
+   }
+ 
+@@ -1478,6 +1545,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallNonvirtualFloatMethodA: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeWithJValues(soa, obj, mid, args).GetF();
+   }
+ 
+@@ -1488,6 +1556,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallNonvirtualDoubleMethod: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     JValue result(InvokeWithVarArgs(soa, obj, mid, ap));
+     return result.GetD();
+   }
+@@ -1497,6 +1566,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallNonvirtualDoubleMethodV: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeWithVarArgs(soa, obj, mid, args).GetD();
+   }
+ 
+@@ -1505,6 +1575,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallNonvirtualDoubleMethodA: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeWithJValues(soa, obj, mid, args).GetD();
+   }
+ 
+@@ -1515,6 +1586,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_VOID(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_VOID(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallNonvirtualVoidMethod: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     InvokeWithVarArgs(soa, obj, mid, ap);
+   }
+ 
+@@ -1523,6 +1595,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_VOID(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_VOID(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallNonvirtualVoidMethodV: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     InvokeWithVarArgs(soa, obj, mid, args);
+   }
+ 
+@@ -1531,6 +1604,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT_RETURN_VOID(obj);
+     CHECK_NON_NULL_ARGUMENT_RETURN_VOID(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallNonvirtualVoidMethodA: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     InvokeWithJValues(soa, obj, mid, args);
+   }
+ 
+@@ -1539,6 +1613,7 @@ class JNI {
+     CHECK_NON_NULL_ARGUMENT(name);
+     CHECK_NON_NULL_ARGUMENT(sig);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "GetFieldID: " << mirror::Class::PrettyClass(soa.Decode<mirror::Class>(java_class)) << "#" << name << " " << sig;
+     return FindFieldID<kEnableIndexIds>(soa, java_class, name, sig, false);
+   }
+ 
+@@ -1755,6 +1830,7 @@ class JNI {
+     ScopedVAArgs free_args_later(&ap);
+     CHECK_NON_NULL_ARGUMENT(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallStaticObjectMethod: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     JValue result(InvokeWithVarArgs(soa, nullptr, mid, ap));
+     jobject local_result = soa.AddLocalReference<jobject>(result.GetL());
+     return local_result;
+@@ -1763,6 +1839,7 @@ class JNI {
+   static jobject CallStaticObjectMethodV(JNIEnv* env, jclass, jmethodID mid, va_list args) {
+     CHECK_NON_NULL_ARGUMENT(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallStaticObjectMethodV: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     JValue result(InvokeWithVarArgs(soa, nullptr, mid, args));
+     return soa.AddLocalReference<jobject>(result.GetL());
+   }
+@@ -1770,6 +1847,7 @@ class JNI {
+   static jobject CallStaticObjectMethodA(JNIEnv* env, jclass, jmethodID mid, const jvalue* args) {
+     CHECK_NON_NULL_ARGUMENT(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallStaticObjectMethodA: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     JValue result(InvokeWithJValues(soa, nullptr, mid, args));
+     return soa.AddLocalReference<jobject>(result.GetL());
+   }
+@@ -1780,6 +1858,7 @@ class JNI {
+     ScopedVAArgs free_args_later(&ap);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallStaticBooleanMethod: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     JValue result(InvokeWithVarArgs(soa, nullptr, mid, ap));
+     return result.GetZ();
+   }
+@@ -1787,12 +1866,14 @@ class JNI {
+   static jboolean CallStaticBooleanMethodV(JNIEnv* env, jclass, jmethodID mid, va_list args) {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallStaticBooleanMethodV: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeWithVarArgs(soa, nullptr, mid, args).GetZ();
+   }
+ 
+   static jboolean CallStaticBooleanMethodA(JNIEnv* env, jclass, jmethodID mid, const jvalue* args) {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallStaticBooleanMethodA: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeWithJValues(soa, nullptr, mid, args).GetZ();
+   }
+ 
+@@ -1802,6 +1883,7 @@ class JNI {
+     ScopedVAArgs free_args_later(&ap);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallStaticByteMethod: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     JValue result(InvokeWithVarArgs(soa, nullptr, mid, ap));
+     return result.GetB();
+   }
+@@ -1809,12 +1891,14 @@ class JNI {
+   static jbyte CallStaticByteMethodV(JNIEnv* env, jclass, jmethodID mid, va_list args) {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallStaticByteMethodV: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeWithVarArgs(soa, nullptr, mid, args).GetB();
+   }
+ 
+   static jbyte CallStaticByteMethodA(JNIEnv* env, jclass, jmethodID mid, const jvalue* args) {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallStaticByteMethodA: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeWithJValues(soa, nullptr, mid, args).GetB();
+   }
+ 
+@@ -1824,6 +1908,7 @@ class JNI {
+     ScopedVAArgs free_args_later(&ap);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallStaticCharMethod: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     JValue result(InvokeWithVarArgs(soa, nullptr, mid, ap));
+     return result.GetC();
+   }
+@@ -1831,12 +1916,14 @@ class JNI {
+   static jchar CallStaticCharMethodV(JNIEnv* env, jclass, jmethodID mid, va_list args) {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallStaticCharMethodV: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeWithVarArgs(soa, nullptr, mid, args).GetC();
+   }
+ 
+   static jchar CallStaticCharMethodA(JNIEnv* env, jclass, jmethodID mid, const jvalue* args) {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallStaticCharMethodA: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeWithJValues(soa, nullptr, mid, args).GetC();
+   }
+ 
+@@ -1846,6 +1933,7 @@ class JNI {
+     ScopedVAArgs free_args_later(&ap);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallStaticShortMethod: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     JValue result(InvokeWithVarArgs(soa, nullptr, mid, ap));
+     return result.GetS();
+   }
+@@ -1853,12 +1941,14 @@ class JNI {
+   static jshort CallStaticShortMethodV(JNIEnv* env, jclass, jmethodID mid, va_list args) {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallStaticShortMethodV: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeWithVarArgs(soa, nullptr, mid, args).GetS();
+   }
+ 
+   static jshort CallStaticShortMethodA(JNIEnv* env, jclass, jmethodID mid, const jvalue* args) {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallStaticShortMethodA: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeWithJValues(soa, nullptr, mid, args).GetS();
+   }
+ 
+@@ -1868,6 +1958,7 @@ class JNI {
+     ScopedVAArgs free_args_later(&ap);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallStaticIntMethod: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     JValue result(InvokeWithVarArgs(soa, nullptr, mid, ap));
+     return result.GetI();
+   }
+@@ -1875,12 +1966,14 @@ class JNI {
+   static jint CallStaticIntMethodV(JNIEnv* env, jclass, jmethodID mid, va_list args) {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallStaticIntMethodV: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeWithVarArgs(soa, nullptr, mid, args).GetI();
+   }
+ 
+   static jint CallStaticIntMethodA(JNIEnv* env, jclass, jmethodID mid, const jvalue* args) {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallStaticIntMethodA: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeWithJValues(soa, nullptr, mid, args).GetI();
+   }
+ 
+@@ -1890,6 +1983,7 @@ class JNI {
+     ScopedVAArgs free_args_later(&ap);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallStaticLongMethod: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     JValue result(InvokeWithVarArgs(soa, nullptr, mid, ap));
+     return result.GetJ();
+   }
+@@ -1897,12 +1991,14 @@ class JNI {
+   static jlong CallStaticLongMethodV(JNIEnv* env, jclass, jmethodID mid, va_list args) {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallStaticLongMethodV: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeWithVarArgs(soa, nullptr, mid, args).GetJ();
+   }
+ 
+   static jlong CallStaticLongMethodA(JNIEnv* env, jclass, jmethodID mid, const jvalue* args) {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallStaticLongMethodA: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeWithJValues(soa, nullptr, mid, args).GetJ();
+   }
+ 
+@@ -1912,6 +2008,7 @@ class JNI {
+     ScopedVAArgs free_args_later(&ap);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallStaticFloatMethod: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     JValue result(InvokeWithVarArgs(soa, nullptr, mid, ap));
+     return result.GetF();
+   }
+@@ -1919,12 +2016,14 @@ class JNI {
+   static jfloat CallStaticFloatMethodV(JNIEnv* env, jclass, jmethodID mid, va_list args) {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallStaticFloatMethodV: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeWithVarArgs(soa, nullptr, mid, args).GetF();
+   }
+ 
+   static jfloat CallStaticFloatMethodA(JNIEnv* env, jclass, jmethodID mid, const jvalue* args) {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallStaticFloatMethodA: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeWithJValues(soa, nullptr, mid, args).GetF();
+   }
+ 
+@@ -1934,6 +2033,7 @@ class JNI {
+     ScopedVAArgs free_args_later(&ap);
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallStaticDoubleMethod: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     JValue result(InvokeWithVarArgs(soa, nullptr, mid, ap));
+     return result.GetD();
+   }
+@@ -1941,12 +2041,14 @@ class JNI {
+   static jdouble CallStaticDoubleMethodV(JNIEnv* env, jclass, jmethodID mid, va_list args) {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallStaticDoubleMethodV: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeWithVarArgs(soa, nullptr, mid, args).GetD();
+   }
+ 
+   static jdouble CallStaticDoubleMethodA(JNIEnv* env, jclass, jmethodID mid, const jvalue* args) {
+     CHECK_NON_NULL_ARGUMENT_RETURN_ZERO(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallStaticDoubleMethodA: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     return InvokeWithJValues(soa, nullptr, mid, args).GetD();
+   }
+ 
+@@ -1956,18 +2058,21 @@ class JNI {
+     ScopedVAArgs free_args_later(&ap);
+     CHECK_NON_NULL_ARGUMENT_RETURN_VOID(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallStaticVoidMethod: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     InvokeWithVarArgs(soa, nullptr, mid, ap);
+   }
+ 
+   static void CallStaticVoidMethodV(JNIEnv* env, jclass, jmethodID mid, va_list args) {
+     CHECK_NON_NULL_ARGUMENT_RETURN_VOID(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallStaticVoidMethodV: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     InvokeWithVarArgs(soa, nullptr, mid, args);
+   }
+ 
+   static void CallStaticVoidMethodA(JNIEnv* env, jclass, jmethodID mid, const jvalue* args) {
+     CHECK_NON_NULL_ARGUMENT_RETURN_VOID(mid);
+     ScopedObjectAccess soa(env);
++    LOG_TRACEJNI << "CallStaticVoidMethodA: " << ArtMethod::PrettyMethod(jni::DecodeArtMethod(mid), true);
+     InvokeWithJValues(soa, nullptr, mid, args);
+   }
+ 
+@@ -1982,6 +2087,7 @@ class JNI {
+     }
+     ScopedObjectAccess soa(env);
+     ObjPtr<mirror::String> result = mirror::String::AllocFromUtf16(soa.Self(), char_count, chars);
++    LOG_TRACEJNI << "NewString: " << result->ToModifiedUtf8();
+     return soa.AddLocalReference<jstring>(result);
+   }
+ 
+@@ -1993,6 +2099,8 @@ class JNI {
+       return nullptr;
+     }
+ 
++    LOG_TRACEJNI << "NewStringUTF: " << utf;
++
+     // The input may come from an untrusted source, so we need to validate it.
+     // We do not perform full validation, only as much as necessary to avoid reading
+     // beyond the terminating null character. CheckJNI performs stronger validation.
+@@ -2144,6 +2252,7 @@ class JNI {
+     if (is_copy != nullptr) {
+       *is_copy = JNI_FALSE;
+     }
++    LOG_TRACEJNI << "GetStringChars: " << s->ToModifiedUtf8();
+     return static_cast<jchar*>(s->GetValue());
+   }
+ 
+@@ -2237,6 +2346,7 @@ class JNI {
+       DCHECK_EQ(byte_count, static_cast<size_t>(end - bytes));
+     }
+     bytes[byte_count] = '\0';
++    LOG_TRACEJNI << "GetStringUTFChars: " << bytes;
+     return bytes;
+   }
+ 
+diff --git a/runtime/reflection.cc b/runtime/reflection.cc
+index a7290a2919328545152ebea7da503462d221c9db..2926b9f2b7e0799cfd9276c81b7404301facd841 100644
+--- a/runtime/reflection.cc
++++ b/runtime/reflection.cc
+@@ -22,6 +22,7 @@
+ #include "class_linker.h"
+ #include "common_throws.h"
+ #include "dex/dex_file-inl.h"
++#include "dex/utf-inl.h"
+ #include "indirect_reference_table-inl.h"
+ #include "jni/java_vm_ext.h"
+ #include "jni/jni_internal.h"
+@@ -446,6 +447,176 @@ ArtMethod* FindVirtualMethod(ObjPtr<mirror::Object> receiver, ArtMethod* method)
+   return receiver->GetClass()->FindVirtualMethodForVirtualOrInterface(method, kRuntimePointerSize);
+ }
+ 
++jsize GetUncompressedStringUTFLength(const uint16_t* chars, size_t length) {
++  jsize byte_count = 0;
++  ConvertUtf16ToUtf8<false, true, false>(chars, length, [&](char c ATTRIBUTE_UNUSED) { ++byte_count; });
++  return byte_count;
++}
++
++char* GetUncompressedStringUTFChars(const uint16_t* chars, size_t length, char* dest) {
++  ConvertUtf16ToUtf8<false, true, false>(chars, length, [&](char c) { *dest++ = c; });
++  return dest;
++}
++
++std::string PrettyMethodArguments(ArtMethod* m, uint32_t* args)
++  REQUIRES_SHARED(Locks::mutator_lock_) {
++    const dex::TypeList* params = m->GetParameterTypeList();
++    if (params == nullptr) {
++      return "[]";
++    }
++
++    std::stringstream result;
++
++    result << "[";
++
++    uint32_t offset = 0;
++    uint32_t num_params = params->Size();
++    if (!m->IsStatic()) {
++      offset = 1;
++    }
++
++    for (uint32_t i = 0; i < num_params; i++) {
++      dex::TypeIndex type_idx = params->GetTypeItem(i).type_idx_;
++      ObjPtr<mirror::Class> param_type(m->ResolveClassFromTypeIndex(type_idx));
++
++      if (param_type == nullptr) {
++        result << "<unresolved>";
++      } else if (!param_type->IsPrimitive()) {
++        ObjPtr<mirror::Object> argument =(reinterpret_cast<StackReference<mirror::Object>*>(&args[i + offset]))->AsMirrorPtr();
++
++        if (argument == nullptr) {
++          result << "null";
++        } else if (argument->IsString()) {
++          auto s = argument->AsString();
++
++          size_t length = s->GetLength();
++          size_t byte_count =
++              s->IsCompressed() ? length : GetUncompressedStringUTFLength(s->GetValue(), length);
++          char* bytes = new char[byte_count + 1];
++          if (s->IsCompressed()) {
++            const uint8_t* src = s->GetValueCompressed();
++            for (size_t i2 = 0; i2 < byte_count; ++i2) {
++              bytes[i2] = src[i2];
++            }
++          } else {
++            char* end = GetUncompressedStringUTFChars(s->GetValue(), length, bytes);
++            CHECK_EQ(byte_count, static_cast<size_t>(end - bytes));
++          }
++          bytes[byte_count] = '\0';
++
++          result << '"' << bytes << '"';
++        } else {
++          result << argument->PrettyTypeOf() << "@" << std::hex << argument.Ptr();
++        }
++      } else {
++        switch (param_type->GetPrimitiveType()) {
++          case Primitive::kPrimNot:
++            result << "<not>";
++            break;
++          case Primitive::kPrimBoolean:
++            result << static_cast<uint8_t>(args[i + offset]);
++            break;
++          case Primitive::kPrimByte:
++            result << static_cast<int8_t>(args[i + offset]);
++            break;
++          case Primitive::kPrimShort:
++            result << static_cast<int16_t>(args[i + offset]);
++            break;
++          case Primitive::kPrimInt:
++            result << static_cast<int32_t>(args[i + offset]);
++            break;
++          case Primitive::kPrimChar:
++            result << static_cast<uint16_t>(args[i + offset]);
++            break;
++          case Primitive::kPrimFloat:
++            result << static_cast<float>(args[i + offset]);
++            break;
++          case Primitive::kPrimLong:
++            result << *(int64_t*)(&args[i + offset]);
++            offset++;
++            break;
++          case Primitive::kPrimDouble:
++            result << *(double*)(&args[i + offset]);
++            offset++;
++            break;
++          case Primitive::kPrimVoid:
++            result << "<void>";
++            break;
++        }
++      }
++
++      if (i < num_params - 1) {
++        result << ", ";
++      }
++    }
++
++    result << "]";
++
++    return result.str();
++  }
++
++  std::string PrettyValue(art::JValue* m, ObjPtr<mirror::Class> type)
++  REQUIRES_SHARED(Locks::mutator_lock_) {
++    if (m == nullptr) {
++      return "null";
++    }
++
++    if (type == nullptr) {
++      return "<unresolved>";
++    } else if (!type->IsPrimitive()) {
++      ObjPtr<mirror::Object> argument = m->GetL();
++
++      if (argument == nullptr) {
++        return "null";
++      } else if (argument->IsString()) {
++        auto s = argument->AsString();
++
++        size_t length = s->GetLength();
++        size_t byte_count =
++            s->IsCompressed() ? length : GetUncompressedStringUTFLength(s->GetValue(), length);
++        char* bytes = new char[byte_count + 1];
++        if (s->IsCompressed()) {
++          const uint8_t* src = s->GetValueCompressed();
++          for (size_t i2 = 0; i2 < byte_count; ++i2) {
++            bytes[i2] = src[i2];
++          }
++        } else {
++          char* end = GetUncompressedStringUTFChars(s->GetValue(), length, bytes);
++          CHECK_EQ(byte_count, static_cast<size_t>(end - bytes));
++        }
++        bytes[byte_count] = '\0';
++
++        return "\"" + std::string(bytes) + "\"";
++      } else {
++        std::stringstream ss;
++        ss << argument->PrettyTypeOf() << "@" << std::hex << argument.Ptr();
++        return ss.str();
++      }
++    } else {
++      switch (type->GetPrimitiveType()) {
++        case Primitive::kPrimNot:
++          return "<not>";
++        case Primitive::kPrimBoolean:
++          return std::to_string(m->GetZ());
++        case Primitive::kPrimByte:
++          return std::to_string(m->GetB());
++        case Primitive::kPrimShort:
++          return std::to_string(m->GetS());
++        case Primitive::kPrimInt:
++          return std::to_string(m->GetI());
++        case Primitive::kPrimChar:
++          return std::to_string(m->GetC());
++        case Primitive::kPrimFloat:
++          return std::to_string(m->GetF());
++        case Primitive::kPrimLong:
++          return std::to_string(m->GetJ());
++        case Primitive::kPrimDouble:
++          return std::to_string(m->GetD());
++        case Primitive::kPrimVoid:
++          return "<void>";
++      }
++    }
++  }
+ 
+ void InvokeWithArgArray(const ScopedObjectAccessAlreadyRunnable& soa,
+                                ArtMethod* method, ArgArray* arg_array, JValue* result,
+@@ -455,7 +626,23 @@ void InvokeWithArgArray(const ScopedObjectAccessAlreadyRunnable& soa,
+   if (UNLIKELY(soa.Env()->IsCheckJniEnabled())) {
+     CheckMethodArguments(soa.Vm(), method->GetInterfaceMethodIfProxy(kRuntimePointerSize), args);
+   }
++
++  auto real_method = method->GetInterfaceMethodIfProxy(kRuntimePointerSize);
++  std::string pretty_arguments;
++  if (real_method) {
++    pretty_arguments = args != nullptr ? PrettyMethodArguments(real_method, args) : "[]";
++  }
++
+   method->Invoke(soa.Self(), args, arg_array->GetNumBytes(), result, shorty);
++
++  if (real_method) {
++    auto exception = Thread::Current()->GetException();
++    LOG_TRACEJNI << "InvokeWithArgArray: "
++                 << ArtMethod::PrettyMethod(method, true) << " "
++                 << pretty_arguments
++                 << " = "
++                 << (exception != nullptr ? exception->Dump() : PrettyValue(result, real_method->ResolveReturnType()));
++  }
+ }
+ 
+ ALWAYS_INLINE
+diff --git a/runtime/runtime.h b/runtime/runtime.h
+index e7b71e29f555bc6074c6dbe6fdc0ae38c6e8485a..b62355bbe1cae8ce47a78e1e704f327014e12200 100644
+--- a/runtime/runtime.h
++++ b/runtime/runtime.h
+@@ -51,6 +51,12 @@
+ #include "reflective_value_visitor.h"
+ #include "runtime_stats.h"
+ 
++extern char *__progname;
++
++#define LOG_TRACEJNI (strcmp(__progname, "com.google.android.gms.unstable") == 0) && \
++      ::android::base::LogMessage(__FILE__, __LINE__, SEVERITY_LAMBDA(INFO), "TraceJNI", -1) \
++      .stream() << "[" << __progname << "] "
++
+ namespace art {
+ 
+ namespace gc {

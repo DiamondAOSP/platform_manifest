@@ -1,0 +1,45 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: js6pak <me@6pak.dev>
+Date: Sun, 23 Jul 2023 01:37:12 +0200
+Subject: [PATCH] Use the same kernel files for both release and debug variants
+
+
+diff --git a/BoardConfig-common.mk b/BoardConfig-common.mk
+index 0c163393633cfe4965179e0626dc4eec95945195..9d906a76e580595f957548e6ddc5fd5fc5ba6f7b 100644
+--- a/BoardConfig-common.mk
++++ b/BoardConfig-common.mk
+@@ -504,11 +504,7 @@ else
+ endif
+ 
+ # DTBO partition definitions
+-ifneq (,$(filter userdebug eng, $(TARGET_BUILD_VARIANT)))
+-    BOARD_PREBUILT_DTBOIMAGE := $(TARGET_KERNEL_DIR)/dtbo.img
+-else
+-    BOARD_PREBUILT_DTBOIMAGE := $(TARGET_KERNEL_DIR)/vintf/dtbo.img
+-endif
++BOARD_PREBUILT_DTBOIMAGE := $(TARGET_KERNEL_DIR)/dtbo.img
+ TARGET_FS_CONFIG_GEN := $(TARGET_BOARD_NAME_DIR)/config.fs
+ 
+ BOARD_DO_NOT_STRIP_RECOVERY_MODULES := true
+@@ -531,11 +527,7 @@ else ifeq (,$(filter-out $(TARGET_BOOTLOADER_BOARD_NAME)_kernel_debug_hang, $(TA
+ else ifeq (,$(filter-out $(TARGET_BOOTLOADER_BOARD_NAME)_kernel_debug_api, $(TARGET_PRODUCT)))
+     KERNEL_MODULE_DIR := $(TARGET_KERNEL_DIR)/debug_api
+ else
+-    ifneq (,$(filter userdebug eng, $(TARGET_BUILD_VARIANT)))
+-        KERNEL_MODULE_DIR := $(TARGET_KERNEL_DIR)
+-    else
+-        KERNEL_MODULE_DIR := $(TARGET_KERNEL_DIR)/vintf
+-    endif
++    KERNEL_MODULE_DIR := $(TARGET_KERNEL_DIR)
+ endif
+ 
+ # Copy kheaders.ko to vendor/lib/modules for VTS test
+@@ -544,8 +536,6 @@ BOARD_VENDOR_KERNEL_MODULES += $(KERNEL_MODULE_DIR)/kheaders.ko
+ KERNEL_MODULES := $(wildcard $(KERNEL_MODULE_DIR)/*.ko)
+ KERNEL_MODULES_LOAD := $(strip $(shell cat $(firstword $(wildcard \
+         $(KERNEL_MODULE_DIR)/modules.load \
+-        $(if $(filter userdebug eng,$(TARGET_BUILD_VARIANT)), \
+-            $(TARGET_KERNEL_DIR)/vintf/modules.load,) \
+         $(TARGET_KERNEL_DIR)/modules.load))))
+ 
+ # DTB

@@ -1,0 +1,338 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: js6pak <me@6pak.dev>
+Date: Fri, 28 Jul 2023 21:22:47 +0200
+Subject: [PATCH] Spoof properties for SafetyNet
+
+Feature: safetynet
+
+diff --git a/libc/system_properties/system_properties.cpp b/libc/system_properties/system_properties.cpp
+index 1cb15c3df5240d252ceb49d7a9212f1f634b279e..b499e9ea11bcb1adf952da4068c7e5a5d667efc6 100644
+--- a/libc/system_properties/system_properties.cpp
++++ b/libc/system_properties/system_properties.cpp
+@@ -58,6 +58,241 @@ static bool is_dir(const char* pathname) {
+   return S_ISDIR(info.st_mode);
+ }
+ 
++char* process_name;
++
++bool is_trace_enabled = false;
++
++static bool equals(const char* lhs, const char* rhs) {
++  if (lhs == nullptr && rhs == nullptr) return true;
++  return lhs != nullptr && rhs != nullptr && strcmp(lhs, rhs) == 0;
++}
++
++static bool starts_with(const char* str, const char* value) {
++  return str != nullptr && strncmp(value, str, strlen(value)) == 0;
++}
++
++static bool is_gms() {
++  return starts_with(process_name, "com.google.android.gms")
++         || equals(process_name, "toolbox"); // TODO
++}
++
++static bool is_gms_safetynet() {
++  return equals(process_name, "com.google.android.gms.unstable")
++         || equals(process_name, "toolbox"); // TODO
++}
++
++static bool is_google_play() {
++  return starts_with(process_name, "com.android.vending");
++}
++
++// We would use __progname instead but SystemProperties::Init is called before zygote sets it
++static void init_process_name() {
++  if (process_name) return;
++
++  FILE* file = fopen("/proc/self/cmdline", "r");
++  if (file == nullptr) {
++    perror("Error opening /proc/self/cmdline");
++    exit(1);
++  }
++
++  char* first = nullptr;
++  char* niceName = nullptr;
++  char* packageName = nullptr;
++
++  char* arg = nullptr;
++  size_t size = 0;
++
++  while (getdelim(&arg, &size, '\0', file) != -1) {
++    if (first == nullptr) {
++      first = strdup(arg);
++    }
++
++    if (starts_with(arg, "--nice-name=")) {
++      niceName = strdup(arg + strlen("--nice-name="));
++      break;
++    }
++
++    if (starts_with(arg, "--package-name=")) {
++      packageName = strdup(arg + strlen("--package-name="));
++      break;
++    }
++  }
++
++  free(arg);
++
++  fclose(file);
++
++  if (niceName) {
++    process_name = niceName;
++    free(first);
++    free(packageName);
++  } else if (packageName) {
++    process_name = packageName;
++    free(first);
++    free(niceName);
++  } else {
++    process_name = first;
++  }
++}
++
++static void init_trace(SystemProperties* properties) {
++  if (is_gms_safetynet()) {
++    is_trace_enabled = true;
++  } else {
++    static const char* trace_namespace = "persist.traceprop.";
++    char key[strlen(trace_namespace) + strlen(process_name) + 1];
++    strcpy(key, trace_namespace);
++    *stpncpy(key + strlen(trace_namespace), process_name, strlen(process_name)) = '\0';
++
++    char value[PROP_VALUE_MAX];
++    if (properties->Get(key, value)) {
++      is_trace_enabled = value[0] == '1';
++    }
++  }
++
++  if (is_trace_enabled) {
++    async_safe_format_log(ANDROID_LOG_DEBUG, "TraceProp", "[%s] Trace enabled", process_name);
++  }
++}
++
++// We can't use std::map inside bionic, oh well
++class SpoofMap {
++  static const int MAX_ENTRIES = 1000;
++
++  struct Entry {
++    const char* key;
++    prop_info* value;
++  };
++
++public:
++  void insert(const char* key, prop_info* value) {
++    if (size >= MAX_ENTRIES) {
++      async_safe_format_log(ANDROID_LOG_FATAL, "GmsCompat/Attestation", "Spoof map is full for %s", process_name);
++      exit(1);
++    }
++
++    entries[size].key = key;
++    entries[size].value = value;
++    size++;
++  }
++
++  bool try_get(const char* key, prop_info** result) {
++    for (int i = 0; i < size; ++i) {
++      if (equals(entries[i].key, key)) {
++        *result = entries[i].value;
++        return true;
++      }
++    }
++    return false;
++  }
++
++private:
++  Entry entries[MAX_ENTRIES]{};
++  int size = 0;
++};
++
++SpoofMap spoof_map;
++
++static void init_spoofing(SystemProperties* properties) {
++  init_process_name();
++  if (process_name == nullptr) return;
++  init_trace(properties);
++
++  auto spoof = [](const auto& name, const auto& value) {
++    prop_info* info;
++
++    if (value != nullptr) {
++      uint32_t namelen = strlen(name);
++      uint32_t valuelen = strlen(value);
++
++      void* p = malloc(sizeof(prop_info) + namelen + 1);
++      info = new(p) prop_info(name, namelen, value, valuelen);
++    } else {
++      info = nullptr;
++    }
++
++    spoof_map.insert(name, info);
++  };
++
++  if (is_gms() || is_google_play()) {
++    async_safe_format_log(ANDROID_LOG_INFO, "GmsCompat/Attestation", "Spoofing props for %s", process_name);
++
++    bool is_emulator = properties->Find("ro.boot.qemu") != nullptr;
++
++    // Hide userdebug
++    spoof("ro.build.type", "user");
++    spoof("ro.build.tags", "release-keys");
++    spoof("ro.debuggable", "0");
++    spoof("ro.secure", "1");
++
++    // Hide unlocked bootloader or custom verified boot keys
++    spoof("ro.boot.flash.locked", "1");
++    spoof("ro.boot.verifiedbootstate", "green");
++    spoof("ro.boot.veritymode", "enforcing");
++    spoof("ro.boot.vbmeta.device_state", "locked");
++//    spoof("ro.boot.vbmeta.digest", nullptr);
++
++    if (!is_emulator) {
++      if (is_gms_safetynet()) {
++        spoof("ro.product.model", "Pixel 2");
++        spoof("ro.product.brand", "google");
++        spoof("ro.product.name", "walleye");
++        spoof("ro.product.device", "walleye");
++        spoof("ro.build.fingerprint", "google/walleye/walleye:8.1.0/OPM1.171019.011/4448085:user/release-keys");
++        spoof("ro.product.first_api_level", "26");
++        spoof("ro.product.board", "walleye");
++        spoof("ro.hardware", "walleye");
++      }
++    } else {
++      spoof("ro.boot.qemu", nullptr);
++      spoof("ro.boot.qemu.gltransport.name", nullptr);
++      spoof("ro.boot.qemu.gltransport.drawFlushInterval", nullptr);
++      spoof("ro.kernel.qemu", nullptr);
++
++      spoof("init.svc.ranchu-setup", nullptr);
++      spoof("init.svc.ranchu-net", nullptr);
++      spoof("init.svc.goldfish-logcat", nullptr);
++      spoof("init.svc.android-hardware-media-c2-goldfish-hal-1-0", nullptr);
++      spoof("ro.soc.model", nullptr);
++      spoof("gsm.version.baseband", "unknown");
++      spoof("gsm.sim.operator.numeric", nullptr);
++//      spoof("ro.hardware.egl", "swiftshader");
++//      spoof("ro.hardware.vulkan", "pastel");
++      spoof("ro.hardware.power", nullptr);
++      spoof("ro.hardware.audio.primary", nullptr);
++      spoof("ro.build.characteristics", nullptr);
++
++      // https://dlcdnets.asus.com/pub/ASUS/ZenFone/ZE551ML/UL-Z00A-WW-2.20.40.206-user.zip?model=asus%20zenfone%202%20%EF%BC%88ze551ml%EF%BC%89
++      spoof("ro.boot.hardware", "moorefield");
++      spoof("ro.board.platform", "moorefield");
++      spoof("ro.product.board", "moorefield");
++      spoof("ro.bootloader", "unknown");
++      spoof("ro.product.brand", "asus");
++      spoof("ro.product.device", "Z00A");
++      spoof("ro.build.display.id", "LRX21V.WW-ASUS_Z00A-2.20.40.206_20170627_2131_user");
++      spoof("ro.build.fingerprint", "asus/WW_Z00A/Z00A:5.0/LRX21V/2.20.40.206_20170627_2131_user:user/release-keys");
++      spoof("ro.hardware", "mofd_v1");
++      spoof("ro.build.id", "LRX21V");
++      spoof("ro.product.manufacturer", "asus");
++      spoof("ro.product.model", "ASUS_Z00AD");
++      spoof("ro.product.name", "WW_Z00A");
++      spoof("ro.build.date.utc", "498552198");
++      spoof("ro.build.user", "jenkings");
++      spoof("ro.build.host", "fdc-12-jenkins");
++      spoof("ro.build.version.codename", "REL");
++      spoof("ro.build.version.incremental", "WW_Z00A-WW_2.20.40.206_20170627_2131_user_rel-user-20170627");
++      spoof("ro.build.version.release", "5.0");
++//    spoof("ro.build.version.sdk", "21");
++      spoof("ro.product.first_api_level", "21");
++      spoof("ro.build.version.security_patch", "2017-05-01");
++//      // while the cpu is 64-bit, the OS isn't, so we add x86_64 artificially hoping google doesn't mind
++//      spoof("ro.product.cpu.abilist", "x86_64,x86,armeabi-v7a,armeabi");
++//      spoof("ro.product.cpu.abilist64", "x86_64");
++//      spoof("ro.product.cpu.abilist32", "x86,armeabi-v7a,armeabi");
++    }
++  }
++}
++
+ bool SystemProperties::Init(const char* filename) {
+   // This is called from __libc_init_common, and should leave errno at 0 (http://b/37248982).
+   ErrnoRestorer errno_restorer;
+@@ -91,6 +326,7 @@ bool SystemProperties::Init(const char* filename) {
+     }
+   }
+   initialized_ = true;
++  init_spoofing(this);
+   return true;
+ }
+ 
+@@ -127,6 +363,15 @@ const prop_info* SystemProperties::Find(const char* name) {
+     return nullptr;
+   }
+ 
++  if (is_trace_enabled)
++    async_safe_format_log(ANDROID_LOG_DEBUG, "TraceProp", "[%s] Find %s", process_name, name);
++
++  prop_info* spoofed;
++  if (spoof_map.try_get(name, &spoofed)) {
++    async_safe_format_log(ANDROID_LOG_DEBUG, "GmsCompat/Attestation", "Spoofing %s for %s", name, process_name);
++    return spoofed;
++  }
++
+   prop_area* pa = contexts_->GetPropAreaForName(name);
+   if (!pa) {
+     async_safe_format_log(ANDROID_LOG_WARN, "libc", "Access denied finding property \"%s\"", name);
+@@ -141,6 +386,9 @@ static bool is_read_only(const char* name) {
+ }
+ 
+ uint32_t SystemProperties::ReadMutablePropertyValue(const prop_info* pi, char* value) {
++  if (is_trace_enabled)
++    async_safe_format_log(ANDROID_LOG_DEBUG, "TraceProp", "[%s] Read %s", process_name, pi->name);
++
+   // We assume the memcpy below gets serialized by the acquire fence.
+   uint32_t new_serial = load_const_atomic(&pi->serial, memory_order_acquire);
+   uint32_t serial;
+@@ -201,6 +449,9 @@ void SystemProperties::ReadCallback(const prop_info* pi,
+   // Read only properties don't need to copy the value to a temporary buffer, since it can never
+   // change.  We use relaxed memory order on the serial load for the same reason.
+   if (is_read_only(pi->name)) {
++    if (is_trace_enabled)
++      async_safe_format_log(ANDROID_LOG_DEBUG, "TraceProp", "[%s] Read %s", process_name, pi->name);
++
+     uint32_t serial = load_const_atomic(&pi->serial, memory_order_relaxed);
+     if (pi->is_long()) {
+       callback(cookie, pi->name, pi->long_value(), serial);
+@@ -364,12 +615,38 @@ const prop_info* SystemProperties::FindNth(unsigned n) {
+   return state.result;
+ }
+ 
+-int SystemProperties::Foreach(void (*propfn)(const prop_info* pi, void* cookie), void* cookie) {
++typedef void (propfn_t)(const prop_info* pi, void* cookie);
++
++int SystemProperties::Foreach(propfn_t* propfn, void* cookie) {
+   if (!initialized_) {
+     return -1;
+   }
+ 
+-  contexts_->ForEach(propfn, cookie);
++//  if (is_trace_enabled)
++//    async_safe_format_log(ANDROID_LOG_DEBUG, "TraceProp", "[%s] Foreach", process_name);
++
++  struct spoofed_foreach {
++    propfn_t* propfn;
++    void* cookie;
++
++    explicit spoofed_foreach(propfn_t* propfn, void* cookie) : propfn(propfn), cookie(cookie) {
++    }
++
++    static void fn(const prop_info* pi, void* ptr) {
++      auto self = reinterpret_cast<spoofed_foreach*>(ptr);
++
++      prop_info* spoofed;
++      if (spoof_map.try_get(pi->name, &spoofed)) {
++//        async_safe_format_log(ANDROID_LOG_DEBUG, "GmsCompat/Attestation", "Spoofing %s for %s", pi->name, process_name);
++        if (spoofed) self->propfn(spoofed, self->cookie);
++        return;
++      }
++
++      self->propfn(pi, self->cookie);
++    }
++  } state(propfn, cookie);
++  contexts_->ForEach(spoofed_foreach::fn, &state);
++
+ 
+   return 0;
+ }

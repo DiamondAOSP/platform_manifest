@@ -1,0 +1,22 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: js6pak <me@6pak.dev>
+Date: Sun, 23 Jul 2023 15:15:11 +0200
+Subject: [PATCH] Override fingerprint for SafetyNet
+
+Based on ProtonAOSP: https://github.com/ProtonAOSP/android_vendor_proton/blob/bce814ef30cbb225129fae1eac35f17b612e4257/build/main.mk#L21C1-L25
+Feature: safetynet
+
+diff --git a/core/diamondaosp.mk b/core/diamondaosp.mk
+index f1454c58cbd9bdcf70541a28e762e442072f7bd7..50fd7a35be807cbce932d25d09db5191f13ea98e 100644
+--- a/core/diamondaosp.mk
++++ b/core/diamondaosp.mk
+@@ -2,3 +2,9 @@ DIAMONDAOSP_VERSION := 13.0.0
+ 
+ ADDITIONAL_SYSTEM_PROPERTIES += \
+     ro.diamondaosp.version=$(DIAMONDAOSP_VERSION)
++
++# Override fingerprint for Google Play Services and SafetyNet
++ifneq ($(PRODUCT_OVERRIDE_FINGERPRINT),)
++ADDITIONAL_SYSTEM_PROPERTIES += \
++    ro.build.stock_fingerprint=$(PRODUCT_OVERRIDE_FINGERPRINT)
++endif

@@ -1,0 +1,80 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: js6pak <me@6pak.dev>
+Date: Thu, 8 Jun 2023 03:29:02 +0200
+Subject: [PATCH] Add kernelsu packages when WITH_KERNELSU is true
+
+Feature: kernelsu
+
+diff --git a/envsetup.sh b/envsetup.sh
+index 17d9bec40a3078bc3a6cf111ad402a880e5d6c64..97900ec4ea1fed35d659ee08975774468cbc68e3 100644
+--- a/envsetup.sh
++++ b/envsetup.sh
+@@ -634,6 +634,45 @@ function choosevariant()
+     done
+ }
+ 
++function choosekernelsu()
++{
++    local default_value
++    if [ "x$WITH_KERNELSU" != x ]; then
++        default_value=$WITH_KERNELSU
++    else
++        default_value=false
++    fi
++    local ANSWER
++
++    export WITH_KERNELSU=
++    while [ -z "$WITH_KERNELSU" ];
++    do
++        echo -n "Do you want to enable KernelSU? [$default_value] "
++        if [ -z "$1" ] ; then
++            read ANSWER
++        else
++            echo $1
++            ANSWER=$1
++        fi
++
++        if [ -z "$ANSWER" ]; then
++            export WITH_KERNELSU=$default_value
++        else
++            if [[ $ANSWER == "true" || $ANSWER == "yes" || $ANSWER == "1" ]]; then
++                export WITH_KERNELSU=true
++            elif [[ $ANSWER == "false" || $ANSWER == "no" || $ANSWER == "0" ]]; then
++                export WITH_KERNELSU=false
++            else
++                echo "** Not a valid boolean: $ANSWER"
++            fi
++        fi
++
++        if [ -n "$1" ] ; then
++            break
++        fi
++    done
++}
++
+ function choosecombo()
+ {
+     choosetype $1
+@@ -646,6 +685,10 @@ function choosecombo()
+     echo
+     choosevariant $3
+ 
++    echo
++    echo
++    choosekernelsu $4
++
+     echo
+     build_build_var_cache
+     set_stuff_for_environment
+diff --git a/target/product/handheld_system.mk b/target/product/handheld_system.mk
+index 3fc44d1fdf6c599eb1bacf75ed01e369fd8f056d..95fb01f32aae126856f50f2139bcf2927a1960a7 100644
+--- a/target/product/handheld_system.mk
++++ b/target/product/handheld_system.mk
+@@ -87,3 +87,7 @@ PRODUCT_VENDOR_PROPERTIES += \
+     ro.carrier?=unknown \
+     ro.config.notification_sound?=OnTheHunt.ogg \
+     ro.config.alarm_alert?=Alarm_Classic.ogg
++
++ifeq ($(WITH_KERNELSU),true)
++PRODUCT_PACKAGES += KernelSU.apk kernelsu.rc install-kernelsu-manager.sh
++endif
